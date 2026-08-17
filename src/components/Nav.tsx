@@ -23,7 +23,7 @@ export function Nav({ user }: { user: { name?: string | null; email?: string | n
         <Link href="/home" className="flex items-center gap-2 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-mark.png" alt="" className="h-7 w-7" aria-hidden />
-          <span className="font-medium tracking-tight">Grounded Skills Lab</span>
+          <span className="font-heading font-medium uppercase tracking-wide text-sm">Grounded Skills Lab</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 flex-1">

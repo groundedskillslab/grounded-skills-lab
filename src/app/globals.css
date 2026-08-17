@@ -49,12 +49,24 @@
   --color-status-critical: var(--status-critical);
   --color-status-critical-soft: var(--status-critical-soft);
 
+  /* Grounded Skills Lab brand typography (set 2026-08-17). Sofia Pro is
+     primary — headlines, section titles, the wordmark. Bookmania is
+     secondary — body text and taglines. Loaded via next/font/local in
+     src/app/fonts.ts; --font-sofia-pro / --font-bookmania are the CSS
+     variables it exposes. `font-heading` is an explicit escape hatch for
+     wordmark/label text that isn't a semantic heading element. */
+  --font-heading: var(--font-sofia-pro), system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-bookmania), system-ui, -apple-system, sans-serif;
 }
 
 body {
   background: var(--plane);
   color: var(--ink);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
 }
 
 * {

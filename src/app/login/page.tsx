@@ -56,7 +56,7 @@ function LoginForm() {
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-mark.png" alt="" className="h-6 w-6" aria-hidden />
-          <div className="text-sm tracking-widest uppercase text-white/60">Grounded Skills Lab</div>
+          <div className="font-heading text-sm tracking-widest uppercase text-white/60">Grounded Skills Lab</div>
         </div>
         <div className="max-w-md">
           <h1 className="text-3xl font-medium leading-tight mb-4">
