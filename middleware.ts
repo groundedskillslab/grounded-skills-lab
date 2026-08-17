@@ -6,7 +6,39 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = ["/login", "/api/auth"];
 
+// Site-wide demo gate (added 2026-08-17, see architecture doc's
+// "Decided 2026-08-17" pre-deployment note). Every demo account shares
+// the same password, so on a public URL anyone with the link could log
+// in as any persona. SITE_ACCESS_PASSWORD adds one more shared password
+// in front of the whole app (including the login page itself) via HTTP
+// Basic Auth. Unset locally on purpose: leave it out of .env.local for
+// dev, and only set it in Vercel's production env vars when going live.
+function siteAccessOk(req: Request): boolean {
+  const sitePassword = process.env.SITE_ACCESS_PASSWORD;
+  if (!sitePassword) return true; // gate disabled — local/dev default
+
+  const header = req.headers.get("authorization");
+  if (!header?.startsWith("Basic ")) return false;
+
+  let decoded: string;
+  try {
+    decoded = atob(header.slice(6));
+  } catch {
+    return false;
+  }
+  const separatorIndex = decoded.indexOf(":");
+  const password = separatorIndex === -1 ? "" : decoded.slice(separatorIndex + 1);
+  return password === sitePassword;
+}
+
 export default auth((req) => {
+  if (!siteAccessOk(req)) {
+    return new NextResponse("Authentication required", {
+      status: 401,
+      headers: { "WWW-Authenticate": 'Basic realm="Grounded Skills Lab"' },
+    });
+  }
+
   const { pathname } = req.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/_next") || pathname === "/favicon.ico";
   if (isPublic) return NextResponse.next();
