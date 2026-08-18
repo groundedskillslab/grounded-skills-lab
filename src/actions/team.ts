@@ -19,9 +19,18 @@ type Role = (typeof VALID_ROLES)[number];
 // already have full org-wide access without a participantAssignments row.
 const CASE_ROLES = new Set(["implementer", "caregiver", "learner"]);
 
-export async function inviteTeamMember(formData: FormData) {
+export type InviteFormState = { error: string | null };
+
+// Used with useActionState (see InviteForm.tsx) rather than a plain form
+// action, so expected failures (bad input, an email that's already active)
+// show up inline on the form instead of crashing to Next.js's generic
+// "A server error occurred" page — that page is what an *uncaught* throw
+// from a Server Action produces, which is what this function used to do
+// for every validation failure. Only a genuinely unexpected error should
+// still throw and hit that fallback.
+export async function inviteTeamMember(_prevState: InviteFormState, formData: FormData): Promise<InviteFormState> {
   const user = await requireUser();
-  if (!isOrgAdmin(user.role)) throw new Error("Only an organization admin can invite new accounts.");
+  if (!isOrgAdmin(user.role)) return { error: "Only an organization admin can invite new accounts." };
 
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
@@ -33,11 +42,30 @@ export async function inviteTeamMember(formData: FormData) {
   const workspaceType = String(formData.get("workspaceType") || "clinical");
   const selfDirected = formData.get("selfDirected") === "on";
 
-  if (!name || !email) throw new Error("Name and email are required.");
-  if (!VALID_ROLES.includes(role)) throw new Error("Invalid role.");
+  if (!name || !email) return { error: "Name and email are required." };
+  if (!VALID_ROLES.includes(role)) return { error: "Invalid role." };
+
+  const admin = createAdminClient();
 
   const [existingByEmail] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (existingByEmail) throw new Error(`${email} already has an account.`);
+  let resendingForUserId: string | null = null;
+
+  if (existingByEmail) {
+    // An email already being in `users` doesn't necessarily mean the
+    // invite was ever completed — a link can go to spam, expire, or (as
+    // happened once already) fail client-side. If they've never actually
+    // signed in, treat this submission as "resend the invite" instead of
+    // blocking outright.
+    let everSignedIn = true; // fail safe: assume active unless proven otherwise
+    if (existingByEmail.authUserId) {
+      const { data: authUserData } = await admin.auth.admin.getUserById(existingByEmail.authUserId);
+      everSignedIn = !!authUserData?.user?.last_sign_in_at;
+    }
+    if (everSignedIn) {
+      return { error: `${email} already has an account.` };
+    }
+    resendingForUserId = existingByEmail.id;
+  }
 
   // Resolve or create the participant this invite should be linked to, for
   // roles whose capability is case-by-case rather than org-wide.
@@ -48,10 +76,10 @@ export async function inviteTeamMember(formData: FormData) {
       .from(participants)
       .where(and(eq(participants.id, existingParticipantId), eq(participants.orgId, user.orgId)))
       .limit(1);
-    if (!existingParticipant) throw new Error("Selected participant not found in this organization.");
+    if (!existingParticipant) return { error: "Selected participant not found in this organization." };
     participantId = existingParticipant.id;
   } else if (CASE_ROLES.has(role) && participantMode === "new") {
-    if (!newParticipantCode) throw new Error("Participant ID is required to create a new participant.");
+    if (!newParticipantCode) return { error: "Participant ID is required to create a new participant." };
     const [created] = await db
       .insert(participants)
       .values({ orgId: user.orgId, displayName: newParticipantName, participantCode: newParticipantCode, workspaceType })
@@ -59,48 +87,63 @@ export async function inviteTeamMember(formData: FormData) {
     participantId = created.id;
   }
 
-  // Create the app-level profile row first (no authUserId yet).
-  const [newUser] = await db
-    .insert(users)
-    .values({ orgId: user.orgId, name, email, role })
-    .returning();
+  // Create (or reuse, on resend) the app-level profile row.
+  let targetUserId: string;
+  if (resendingForUserId) {
+    await db.update(users).set({ name, role }).where(eq(users.id, resendingForUserId));
+    targetUserId = resendingForUserId;
+  } else {
+    const [newUser] = await db.insert(users).values({ orgId: user.orgId, name, email, role }).returning();
+    targetUserId = newUser.id;
+  }
 
   // Invite via Supabase Auth — sends the client an email with a link to set
   // their own password. redirectTo lands them on /accept-invite (public
-  // path, see middleware.ts) which finishes the password setup.
-  const admin = createAdminClient();
+  // path, see middleware.ts) which finishes the password setup. Calling
+  // this again for an existing-but-unconfirmed email resends a fresh
+  // link and invalidates the old one.
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${getSiteUrl()}/accept-invite`,
     data: { name },
   });
 
   if (inviteError) {
-    // Roll back the app-level row so a failed invite doesn't leave a
-    // dangling, unusable account (and free up the unique email for retry).
-    await db.delete(users).where(eq(users.id, newUser.id));
-    throw new Error(`Couldn't send invite: ${inviteError.message}`);
+    if (!resendingForUserId) {
+      // Roll back the app-level row so a failed first invite doesn't leave
+      // a dangling, unusable account (and free up the unique email for retry).
+      await db.delete(users).where(eq(users.id, targetUserId));
+    }
+    return { error: `Couldn't send invite: ${inviteError.message}` };
   }
 
-  await db.update(users).set({ authUserId: invited.user.id }).where(eq(users.id, newUser.id));
+  await db.update(users).set({ authUserId: invited.user.id }).where(eq(users.id, targetUserId));
 
   if (participantId) {
-    if (role === "learner") {
-      await db.insert(participantAssignments).values({ participantId, userId: newUser.id, roleOnCase: "learner" });
-      if (selfDirected) {
-        await db.insert(participantAssignments).values({ participantId, userId: newUser.id, roleOnCase: "practitioner" });
+    const roleOnCaseValues = role === "learner" ? (selfDirected ? ["learner", "practitioner"] : ["learner"]) : [role];
+    for (const roleOnCase of roleOnCaseValues) {
+      const [already] = await db
+        .select()
+        .from(participantAssignments)
+        .where(
+          and(
+            eq(participantAssignments.participantId, participantId),
+            eq(participantAssignments.userId, targetUserId),
+            eq(participantAssignments.roleOnCase, roleOnCase)
+          )
+        )
+        .limit(1);
+      if (!already) {
+        await db.insert(participantAssignments).values({ participantId, userId: targetUserId, roleOnCase });
       }
-    } else {
-      // caregiver | implementer — roleOnCase matches their global role.
-      await db.insert(participantAssignments).values({ participantId, userId: newUser.id, roleOnCase: role });
     }
   }
 
   await logAudit({
     orgId: user.orgId,
     userId: user.id,
-    action: "team_member_invited",
+    action: resendingForUserId ? "team_member_invite_resent" : "team_member_invited",
     entityType: "user",
-    entityId: newUser.id,
+    entityId: targetUserId,
     metadata: { email, role, participantId },
   });
 

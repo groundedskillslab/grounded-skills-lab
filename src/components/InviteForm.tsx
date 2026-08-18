@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { ROLE_LABELS, type Role } from "@/lib/roles";
 import { WORKSPACE_TYPES } from "@/lib/labels";
+import type { InviteFormState } from "@/actions/team";
 
 const CASE_ROLES = new Set<Role>(["implementer", "caregiver", "learner"]);
 
@@ -12,18 +13,22 @@ export function InviteForm({
   action,
   participants,
 }: {
-  action: (formData: FormData) => void;
+  action: (prevState: InviteFormState, formData: FormData) => Promise<InviteFormState>;
   participants: ParticipantOption[];
 }) {
   const [role, setRole] = useState<Role>("learner");
   const [participantMode, setParticipantMode] = useState<"none" | "existing" | "new">(
     participants.length > 0 ? "existing" : "new"
   );
+  // Server action returns { error } instead of throwing for expected
+  // failures (duplicate email, bad input) — see src/actions/team.ts — so
+  // they render inline here instead of crashing to a generic error page.
+  const [state, formAction, pending] = useActionState<InviteFormState, FormData>(action, { error: null });
 
   const showParticipantSection = CASE_ROLES.has(role);
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div>
         <label className="block text-sm font-medium mb-1">Name</label>
         <input name="name" required placeholder="Full name" className="w-full rounded-lg border border-gridline px-3 py-2 text-sm" />
@@ -126,8 +131,14 @@ export function InviteForm({
         </div>
       )}
 
-      <button type="submit" className="w-full rounded-lg bg-ink text-white py-2 text-sm font-medium hover:opacity-90">
-        Send Invite
+      {state.error && <p className="text-sm text-status-serious">{state.error}</p>}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-full rounded-lg bg-ink text-white py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+      >
+        {pending ? "Sending..." : "Send Invite"}
       </button>
     </form>
   );
