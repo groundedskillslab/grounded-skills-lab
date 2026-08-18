@@ -1,8 +1,9 @@
 import { requireUser } from "@/lib/session";
-import { listParticipants, getParticipantPrograms, getMaintenancePlan, getAssignmentsForUser, getUser } from "@/lib/data";
+import { listParticipants, getParticipantPrograms, getMaintenancePlan, getAssignmentsForUser, getUser, getSelfDirectedParticipant } from "@/lib/data";
 import { computeProgramReview } from "@/lib/review";
 import { getLabels } from "@/lib/labels";
 import { Card, SectionHeader, StatTile, Pill, LinkButton, EmptyState } from "@/components/ui";
+import { SelfDirectedTour } from "@/components/Tour";
 import Link from "next/link";
 import { isFullAccessRole } from "@/lib/rbac";
 
@@ -173,15 +174,42 @@ async function SimpleHome({ userId, name, role }: { userId: string; name: string
   const isLearner = role === "learner";
   const isCaregiver = role === "caregiver";
   const assignments = await getAssignmentsForUser(userId);
+  const selfDirectedParticipant = isLearner ? await getSelfDirectedParticipant(userId) : undefined;
+  const labels = getLabels(selfDirectedParticipant?.workspaceType ?? "general");
+  const programs = selfDirectedParticipant ? await getParticipantPrograms(selfDirectedParticipant.id) : [];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-medium">{greeting()}, {name.split(" ")[0]}.</h1>
-        <p className="text-ink-secondary mt-1">
-          {isLearner ? "Here's what you're working on." : isCaregiver ? "Here's today's practice." : "Here's what's assigned to you."}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-medium">{greeting()}, {name.split(" ")[0]}.</h1>
+          <p className="text-ink-secondary mt-1">
+            {isLearner ? "Here's what you're working on." : isCaregiver ? "Here's today's practice." : "Here's what's assigned to you."}
+          </p>
+        </div>
+        {isLearner && (
+          <SelfDirectedTour
+            storageKey="gsl_tour_self_directed_v1"
+            participantId={selfDirectedParticipant?.id}
+            firstProgramId={programs[0]?.id}
+            programLabel={labels.program}
+            sessionLabel={labels.session}
+          />
+        )}
       </div>
+
+      {isLearner && selfDirectedParticipant && (
+        <Card className="bg-brand-soft border-0">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="text-sm text-brand-ink font-medium">Training yourself: {selfDirectedParticipant.displayName}</div>
+              <div className="text-xs text-ink-muted mt-0.5">New here? The Getting Started guide walks through the whole loop.</div>
+            </div>
+            <LinkButton href="/guide" variant="secondary">Getting Started guide</LinkButton>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <SectionHeader title="Assigned Practice" />
         {assignments.length === 0 ? (
@@ -200,7 +228,12 @@ async function SimpleHome({ userId, name, role }: { userId: string; name: string
           </ul>
         )}
       </Card>
-      <LinkButton href="/practice" variant="secondary">Go to Practice Mode</LinkButton>
+      <div className="flex gap-2 flex-wrap">
+        <LinkButton href="/practice" variant="secondary">Go to Practice Mode</LinkButton>
+        {selfDirectedParticipant && (
+          <LinkButton href={`/people/${selfDirectedParticipant.id}`} variant="secondary">Go to your profile</LinkButton>
+        )}
+      </div>
     </div>
   );
 }

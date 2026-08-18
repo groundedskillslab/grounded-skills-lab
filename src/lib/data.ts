@@ -39,6 +39,39 @@ export async function getParticipant(id: string) {
   return row;
 }
 
+/**
+ * The self-directed pattern (see the "Permission model" note in the
+ * architecture doc / Devon Ortiz demo account): a user trains themselves
+ * with no separate coach, so they hold BOTH a "learner" capability row and
+ * a "practitioner" (or "implementer") capability row on the same
+ * participant record. A plain learner-under-a-coach only holds "learner" on
+ * their own case, if they have one at all.
+ *
+ * Returns that participant if this user matches the self-directed pattern
+ * on any single participant, otherwise undefined. Used to personalize the
+ * Getting Started guide and first-login tour with real links instead of
+ * generic instructions.
+ */
+export async function getSelfDirectedParticipant(userId: string) {
+  const rows = await db
+    .select({ participantId: participantAssignments.participantId, roleOnCase: participantAssignments.roleOnCase })
+    .from(participantAssignments)
+    .where(eq(participantAssignments.userId, userId));
+
+  const capsByParticipant = new Map<string, Set<string>>();
+  for (const r of rows) {
+    if (!capsByParticipant.has(r.participantId)) capsByParticipant.set(r.participantId, new Set());
+    capsByParticipant.get(r.participantId)!.add(r.roleOnCase);
+  }
+
+  for (const [participantId, caps] of capsByParticipant) {
+    if (caps.has("learner") && (caps.has("practitioner") || caps.has("implementer"))) {
+      return getParticipant(participantId);
+    }
+  }
+  return undefined;
+}
+
 export async function getParticipantTeam(participantId: string) {
   const rows = await db
     .select({ assignment: participantAssignments, user: users })

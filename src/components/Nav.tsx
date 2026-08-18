@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/practice", label: "Practice" },
   { href: "/analytics", label: "Analytics" },
   { href: "/library", label: "Library" },
+  { href: "/guide", label: "Guide" },
 ];
 
 export function Nav({ user }: { user: { name?: string | null; email?: string | null; role: string; title?: string } }) {
