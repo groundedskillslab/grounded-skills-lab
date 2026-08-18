@@ -10,7 +10,9 @@
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts",
-    "auth:link": "dotenv -e .env.local -- tsx scripts/link-supabase-auth-users.ts"
+    "auth:link": "dotenv -e .env.local -- tsx scripts/link-supabase-auth-users.ts",
+    "rls:apply": "dotenv -e .env.local -- tsx scripts/apply-rls.ts",
+    "rls:verify": "dotenv -e .env.local -- tsx scripts/verify-rls.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
