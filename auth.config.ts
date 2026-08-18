@@ -2,7 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 
 // Edge-safe base config (no database access) shared between the full
 // auth.ts (used in server components / route handlers) and middleware.ts
-// (which must stay free of Node-only native modules like better-sqlite3).
+// (which must stay free of Node-only DB clients — keep queries out of here).
 export const authConfig: NextAuthConfig = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },

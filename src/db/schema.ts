@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, boolean, real, timestamp } from "drizzle-orm/pg-core";
 import { randomUUID } from "crypto";
 
 const id = () =>
@@ -6,20 +6,20 @@ const id = () =>
     .primaryKey()
     .$defaultFn(() => randomUUID());
 
-const now = () => integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date());
+const now = () => timestamp("created_at", { mode: "date" }).$defaultFn(() => new Date());
 
 /* ------------------------------------------------------------------ */
 /* Organizations & Users                                               */
 /* ------------------------------------------------------------------ */
 
-export const organizations = sqliteTable("organizations", {
+export const organizations = pgTable("organizations", {
   id: id(),
   name: text("name").notNull(),
   createdAt: now(),
 });
 
 // role: org_admin | practitioner | implementer | caregiver | learner
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: id(),
   orgId: text("org_id").notNull(),
   name: text("name").notNull(),
@@ -35,19 +35,19 @@ export const users = sqliteTable("users", {
 /* ------------------------------------------------------------------ */
 
 // workspaceType: clinical | performance | education | general
-export const participants = sqliteTable("participants", {
+export const participants = pgTable("participants", {
   id: id(),
   orgId: text("org_id").notNull(),
   displayName: text("display_name").notNull(),
   participantCode: text("participant_code").notNull(),
   workspaceType: text("workspace_type").notNull(),
   primaryPractitionerId: text("primary_practitioner_id"),
-  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  archived: boolean("archived").notNull().default(false),
   createdAt: now(),
 });
 
 // roleOnCase: practitioner | implementer | caregiver | learner
-export const participantAssignments = sqliteTable("participant_assignments", {
+export const participantAssignments = pgTable("participant_assignments", {
   id: id(),
   participantId: text("participant_id").notNull(),
   userId: text("user_id").notNull(),
@@ -59,7 +59,7 @@ export const participantAssignments = sqliteTable("participant_assignments", {
 /* Goal hierarchy: Domain -> Goal -> Program -> Target                 */
 /* ------------------------------------------------------------------ */
 
-export const domains = sqliteTable("domains", {
+export const domains = pgTable("domains", {
   id: id(),
   participantId: text("participant_id").notNull(),
   name: text("name").notNull(),
@@ -68,7 +68,7 @@ export const domains = sqliteTable("domains", {
 });
 
 // status: active | on_hold | achieved | discontinued
-export const goals = sqliteTable("goals", {
+export const goals = pgTable("goals", {
   id: id(),
   domainId: text("domain_id").notNull(),
   participantId: text("participant_id").notNull(),
@@ -80,7 +80,7 @@ export const goals = sqliteTable("goals", {
 });
 
 // journeyStage: not_started | baseline | acquisition | improving | generalizing | mastered | maintenance
-export const programs = sqliteTable("programs", {
+export const programs = pgTable("programs", {
   id: id(),
   goalId: text("goal_id").notNull(),
   participantId: text("participant_id").notNull(),
@@ -94,25 +94,25 @@ export const programs = sqliteTable("programs", {
   caregiverSummary: text("caregiver_summary"),
   coachSummary: text("coach_summary"),
   journeyStage: text("journey_stage").notNull().default("not_started"),
-  masteredAt: integer("mastered_at", { mode: "timestamp" }),
-  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  masteredAt: timestamp("mastered_at", { mode: "date" }),
+  archived: boolean("archived").notNull().default(false),
   createdByUserId: text("created_by_user_id"),
   createdAt: now(),
 });
 
 // ordered breakdown of the skill for teaching / display purposes
-export const programSteps = sqliteTable("program_steps", {
+export const programSteps = pgTable("program_steps", {
   id: id(),
   programId: text("program_id").notNull(),
   orderIndex: integer("order_index").notNull(),
   text: text("text").notNull(),
   groupLabel: text("group_label"),
-  isCritical: integer("is_critical", { mode: "boolean" }).notNull().default(false),
+  isCritical: boolean("is_critical").notNull().default(false),
 });
 
 // measurementType: independent_prompted_incorrect | correct_incorrect | percentage | frequency
 //   | rate | duration | latency | task_analysis | rating | opportunity | yes_no | custom
-export const targets = sqliteTable("targets", {
+export const targets = pgTable("targets", {
   id: id(),
   programId: text("program_id").notNull(),
   name: text("name").notNull(),
@@ -121,7 +121,7 @@ export const targets = sqliteTable("targets", {
   measurementType: text("measurement_type").notNull(),
   unitLabel: text("unit_label"), // e.g. "seconds", "reps", "%"
   promptHierarchyId: text("prompt_hierarchy_id"),
-  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  archived: boolean("archived").notNull().default(false),
   createdAt: now(),
 });
 
@@ -129,25 +129,25 @@ export const targets = sqliteTable("targets", {
 /* Prompt hierarchies & mastery rules                                  */
 /* ------------------------------------------------------------------ */
 
-export const promptHierarchies = sqliteTable("prompt_hierarchies", {
+export const promptHierarchies = pgTable("prompt_hierarchies", {
   id: id(),
   orgId: text("org_id").notNull(),
   name: text("name").notNull(),
   levels: text("levels").notNull(), // JSON string[] ordered least->most support
   strategy: text("strategy").notNull().default("least_to_most"), // least_to_most|most_to_least|graduated_guidance|time_delay|custom
-  isTemplate: integer("is_template", { mode: "boolean" }).notNull().default(false),
+  isTemplate: boolean("is_template").notNull().default(false),
 });
 
 // criteria: JSON e.g. {"type":"percentage_consecutive","threshold":80,"consecutiveSessions":3}
-export const masteryRules = sqliteTable("mastery_rules", {
+export const masteryRules = pgTable("mastery_rules", {
   id: id(),
   targetId: text("target_id"),
   programId: text("program_id"),
   description: text("description").notNull(),
   criteria: text("criteria").notNull(), // JSON
-  autoDetectedAt: integer("auto_detected_at", { mode: "timestamp" }),
+  autoDetectedAt: timestamp("auto_detected_at", { mode: "date" }),
   confirmedByUserId: text("confirmed_by_user_id"),
-  confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+  confirmedAt: timestamp("confirmed_at", { mode: "date" }),
 });
 
 /* ------------------------------------------------------------------ */
@@ -155,7 +155,7 @@ export const masteryRules = sqliteTable("mastery_rules", {
 /* ------------------------------------------------------------------ */
 
 // dimensionType: person|setting|equipment|instruction|partner|environment|time|stimulus|training_condition|opponent
-export const generalizationDimensions = sqliteTable("generalization_dimensions", {
+export const generalizationDimensions = pgTable("generalization_dimensions", {
   id: id(),
   programId: text("program_id").notNull(),
   dimensionType: text("dimension_type").notNull(),
@@ -163,19 +163,19 @@ export const generalizationDimensions = sqliteTable("generalization_dimensions",
 });
 
 // result: met | partial | not_met
-export const generalizationProbes = sqliteTable("generalization_probes", {
+export const generalizationProbes = pgTable("generalization_probes", {
   id: id(),
   dimensionId: text("dimension_id").notNull(),
   targetId: text("target_id"),
   programId: text("program_id").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
   result: text("result").notNull(),
   context: text("context"),
   notes: text("notes"),
   recordedByUserId: text("recorded_by_user_id"),
 });
 
-export const maintenancePlans = sqliteTable("maintenance_plans", {
+export const maintenancePlans = pgTable("maintenance_plans", {
   id: id(),
   programId: text("program_id").notNull(),
   schedule: text("schedule").notNull(), // JSON string[] e.g. ["1_week","2_week","1_month"]
@@ -183,12 +183,12 @@ export const maintenancePlans = sqliteTable("maintenance_plans", {
 });
 
 // result: stable | declined | not_yet_checked
-export const maintenanceChecks = sqliteTable("maintenance_checks", {
+export const maintenanceChecks = pgTable("maintenance_checks", {
   id: id(),
   maintenancePlanId: text("maintenance_plan_id").notNull(),
   label: text("label").notNull(), // "1 week"
-  dueDate: integer("due_date", { mode: "timestamp" }).notNull(),
-  completedDate: integer("completed_date", { mode: "timestamp" }),
+  dueDate: timestamp("due_date", { mode: "date" }).notNull(),
+  completedDate: timestamp("completed_date", { mode: "date" }),
   result: text("result").notNull().default("not_yet_checked"),
   performanceValue: real("performance_value"),
   notes: text("notes"),
@@ -200,12 +200,12 @@ export const maintenanceChecks = sqliteTable("maintenance_checks", {
 /* ------------------------------------------------------------------ */
 
 // type: session | fidelity_observation
-export const sessions = sqliteTable("sessions", {
+export const sessions = pgTable("sessions", {
   id: id(),
   participantId: text("participant_id").notNull(),
   programId: text("program_id"),
   conductedByUserId: text("conducted_by_user_id").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
   durationMinutes: real("duration_minutes"),
   contextTags: text("context_tags"), // JSON string[]
   notes: text("notes"),
@@ -217,11 +217,11 @@ export const sessions = sqliteTable("sessions", {
 });
 
 // result: independent | prompted | incorrect | correct | na
-export const trialData = sqliteTable("trial_data", {
+export const trialData = pgTable("trial_data", {
   id: id(),
   sessionId: text("session_id").notNull(),
   targetId: text("target_id").notNull(),
-  timestamp: integer("timestamp", { mode: "timestamp" }).notNull(),
+  timestamp: timestamp("timestamp", { mode: "date" }).notNull(),
   result: text("result").notNull(),
   promptLevel: text("prompt_level"),
   value: real("value"), // duration/latency/rating/frequency/custom numeric
@@ -238,14 +238,14 @@ export const trialData = sqliteTable("trial_data", {
 /* Implementation / Treatment Fidelity                                 */
 /* ------------------------------------------------------------------ */
 
-export const fidelityProtocols = sqliteTable("fidelity_protocols", {
+export const fidelityProtocols = pgTable("fidelity_protocols", {
   id: id(),
   programId: text("program_id").notNull(),
   name: text("name").notNull(),
   createdAt: now(),
 });
 
-export const fidelityItems = sqliteTable("fidelity_items", {
+export const fidelityItems = pgTable("fidelity_items", {
   id: id(),
   protocolId: text("protocol_id").notNull(),
   orderIndex: integer("order_index").notNull(),
@@ -253,7 +253,7 @@ export const fidelityItems = sqliteTable("fidelity_items", {
 });
 
 // scores: JSON { [itemId]: "correct"|"incorrect"|"na" }
-export const fidelityObservations = sqliteTable("fidelity_observations", {
+export const fidelityObservations = pgTable("fidelity_observations", {
   id: id(),
   protocolId: text("protocol_id").notNull(),
   participantId: text("participant_id").notNull(),
@@ -261,7 +261,7 @@ export const fidelityObservations = sqliteTable("fidelity_observations", {
   sessionId: text("session_id"),
   observedUserId: text("observed_user_id"), // implementer being observed
   observerUserId: text("observer_user_id").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
   scores: text("scores").notNull(), // JSON
   fidelityPercent: real("fidelity_percent").notNull(),
   notes: text("notes"),
@@ -273,7 +273,7 @@ export const fidelityObservations = sqliteTable("fidelity_observations", {
 /* ------------------------------------------------------------------ */
 
 // status: assigned | started | completed | missed
-export const assignments = sqliteTable("assignments", {
+export const assignments = pgTable("assignments", {
   id: id(),
   participantId: text("participant_id").notNull(),
   programId: text("program_id"),
@@ -282,19 +282,19 @@ export const assignments = sqliteTable("assignments", {
   frequency: text("frequency"), // free text e.g. "Once each evening"
   assignedByUserId: text("assigned_by_user_id").notNull(),
   assignedToUserId: text("assigned_to_user_id"),
-  dueDate: integer("due_date", { mode: "timestamp" }),
+  dueDate: timestamp("due_date", { mode: "date" }),
   status: text("status").notNull().default("assigned"),
   createdAt: now(),
 });
 
 // result: successful | needed_help | not_completed | barrier
-export const practiceLogs = sqliteTable("practice_logs", {
+export const practiceLogs = pgTable("practice_logs", {
   id: id(),
   assignmentId: text("assignment_id"),
   participantId: text("participant_id").notNull(),
   programId: text("program_id").notNull(),
   targetId: text("target_id"),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
   loggedByUserId: text("logged_by_user_id").notNull(),
   result: text("result").notNull(),
   whatWorkedNote: text("what_worked_note"), // "What Worked" — shared reflection language w/ the Practice Journal
@@ -313,12 +313,12 @@ export const practiceLogs = sqliteTable("practice_logs", {
 /* Self monitoring (learner/athlete self tracking)                     */
 /* ------------------------------------------------------------------ */
 
-export const selfMonitoringEntries = sqliteTable("self_monitoring_entries", {
+export const selfMonitoringEntries = pgTable("self_monitoring_entries", {
   id: id(),
   participantId: text("participant_id").notNull(),
   programId: text("program_id"),
-  date: integer("date", { mode: "timestamp" }).notNull(),
-  completed: integer("completed", { mode: "boolean" }).notNull().default(false),
+  date: timestamp("date", { mode: "date" }).notNull(),
+  completed: boolean("completed").notNull().default(false),
   value: real("value"),
   notes: text("notes"),
   createdAt: now(),
@@ -328,7 +328,7 @@ export const selfMonitoringEntries = sqliteTable("self_monitoring_entries", {
 /* Contextual tags (canonical tag list per org)                        */
 /* ------------------------------------------------------------------ */
 
-export const contextualTags = sqliteTable("contextual_tags", {
+export const contextualTags = pgTable("contextual_tags", {
   id: id(),
   orgId: text("org_id").notNull(),
   label: text("label").notNull(),
@@ -339,10 +339,10 @@ export const contextualTags = sqliteTable("contextual_tags", {
 /* Program change tracking / professional decision log                 */
 /* ------------------------------------------------------------------ */
 
-export const programChanges = sqliteTable("program_changes", {
+export const programChanges = pgTable("program_changes", {
   id: id(),
   programId: text("program_id").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
   changeType: text("change_type").notNull(),
   description: text("description").notNull(),
   rationale: text("rationale"),
@@ -357,14 +357,14 @@ export const programChanges = sqliteTable("program_changes", {
 /* ------------------------------------------------------------------ */
 
 // type: program | task_analysis | measurement | prompt_hierarchy | fidelity_checklist | mastery_rule | generalization_plan
-export const templates = sqliteTable("templates", {
+export const templates = pgTable("templates", {
   id: id(),
   orgId: text("org_id").notNull(),
   name: text("name").notNull(),
   type: text("type").notNull(),
   description: text("description"),
   payload: text("payload").notNull(), // JSON
-  isOrgWide: integer("is_org_wide", { mode: "boolean" }).notNull().default(true),
+  isOrgWide: boolean("is_org_wide").notNull().default(true),
   createdByUserId: text("created_by_user_id"),
   createdAt: now(),
 });
@@ -374,7 +374,7 @@ export const templates = sqliteTable("templates", {
 /* ------------------------------------------------------------------ */
 
 // status: pending | approved | edited | rejected
-export const aiDrafts = sqliteTable("ai_drafts", {
+export const aiDrafts = pgTable("ai_drafts", {
   id: id(),
   orgId: text("org_id").notNull(),
   programId: text("program_id"),
@@ -390,7 +390,7 @@ export const aiDrafts = sqliteTable("ai_drafts", {
 /* Audit log                                                            */
 /* ------------------------------------------------------------------ */
 
-export const auditLogs = sqliteTable("audit_logs", {
+export const auditLogs = pgTable("audit_logs", {
   id: id(),
   orgId: text("org_id").notNull(),
   userId: text("user_id"),
@@ -398,5 +398,5 @@ export const auditLogs = sqliteTable("audit_logs", {
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id"),
   metadata: text("metadata"), // JSON
-  timestamp: integer("timestamp", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  timestamp: timestamp("timestamp", { mode: "date" }).$defaultFn(() => new Date()),
 });

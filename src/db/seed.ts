@@ -6,7 +6,8 @@
  * model. Run with: npm run db:seed
  */
 import bcrypt from "bcryptjs";
-import { db, sqlite } from "./index";
+import { sql } from "drizzle-orm";
+import { db } from "./index";
 import {
   organizations,
   users,
@@ -44,7 +45,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 const jitter = (v: number, spread: number) => v + (Math.random() * 2 - 1) * spread;
 
-function wipe() {
+async function wipe() {
   const tables = [
     "audit_logs", "ai_drafts", "templates", "program_changes", "contextual_tags",
     "self_monitoring_entries", "practice_logs", "assignments", "fidelity_observations",
@@ -53,12 +54,12 @@ function wipe() {
     "prompt_hierarchies", "targets", "program_steps", "programs", "goals", "domains",
     "participant_assignments", "participants", "users", "organizations",
   ];
-  for (const t of tables) sqlite.exec(`DELETE FROM ${t};`);
+  for (const t of tables) await db.execute(sql.raw(`DELETE FROM ${t};`));
 }
 
 async function main() {
   console.log("Wiping existing data...");
-  wipe();
+  await wipe();
 
   console.log("Creating organization + users...");
   const [org] = await db
