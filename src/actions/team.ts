@@ -47,25 +47,26 @@ export async function inviteTeamMember(_prevState: InviteFormState, formData: Fo
 
   const admin = createAdminClient();
 
+  // An email already existing in `users` doesn't tell us whether that
+  // invite was ever actually completed — a link can go to spam, expire,
+  // or (as happened once already) fail client-side. Supabase's Auth API
+  // has no reliable "did they ever sign in" signal for this either:
+  // verifying an invite link itself stamps last_sign_in_at server-side,
+  // even if the browser never got as far as setting a password — so that
+  // can't distinguish "stuck mid-invite" from "fully active" either.
+  // Rather than guess, treat resubmitting an existing email as an
+  // intentional resend. inviteUserByEmail can't be called a second time
+  // for the same address — Supabase errors "already registered" even for
+  // an unconfirmed account (a known gap: see supabase/auth#2180) — so
+  // resending uses resetPasswordForEmail instead. That works whether the
+  // person never finished setting a password (lets them set one for the
+  // first time) or is already fully active (an ordinary password reset),
+  // and lands on the exact same /accept-invite flow either way.
   const [existingByEmail] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  let resendingForUserId: string | null = null;
-
-  if (existingByEmail) {
-    // An email already being in `users` doesn't necessarily mean the
-    // invite was ever completed — a link can go to spam, expire, or (as
-    // happened once already) fail client-side. If they've never actually
-    // signed in, treat this submission as "resend the invite" instead of
-    // blocking outright.
-    let everSignedIn = true; // fail safe: assume active unless proven otherwise
-    if (existingByEmail.authUserId) {
-      const { data: authUserData } = await admin.auth.admin.getUserById(existingByEmail.authUserId);
-      everSignedIn = !!authUserData?.user?.last_sign_in_at;
-    }
-    if (everSignedIn) {
-      return { error: `${email} already has an account.` };
-    }
-    resendingForUserId = existingByEmail.id;
-  }
+  // Only treat it as a resend if there's a Supabase Auth account to resend
+  // to — an app-level row with no authUserId (shouldn't normally happen)
+  // falls through to the ordinary create-new path below to self-heal.
+  const resendingForUserId = existingByEmail?.authUserId ? existingByEmail.id : null;
 
   // Resolve or create the participant this invite should be linked to, for
   // roles whose capability is case-by-case rather than org-wide.
@@ -87,36 +88,43 @@ export async function inviteTeamMember(_prevState: InviteFormState, formData: Fo
     participantId = created.id;
   }
 
-  // Create (or reuse, on resend) the app-level profile row.
+  // Create (reusing the existing row if there is one, even without an
+  // authUserId yet) or insert fresh — email is unique, so an existing row
+  // must be updated rather than inserted into again.
   let targetUserId: string;
-  if (resendingForUserId) {
-    await db.update(users).set({ name, role }).where(eq(users.id, resendingForUserId));
-    targetUserId = resendingForUserId;
+  if (existingByEmail) {
+    await db.update(users).set({ name, role }).where(eq(users.id, existingByEmail.id));
+    targetUserId = existingByEmail.id;
   } else {
     const [newUser] = await db.insert(users).values({ orgId: user.orgId, name, email, role }).returning();
     targetUserId = newUser.id;
   }
 
-  // Invite via Supabase Auth — sends the client an email with a link to set
-  // their own password. redirectTo lands them on /accept-invite (public
-  // path, see middleware.ts) which finishes the password setup. Calling
-  // this again for an existing-but-unconfirmed email resends a fresh
-  // link and invalidates the old one.
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${getSiteUrl()}/accept-invite`,
-    data: { name },
-  });
+  if (resendingForUserId) {
+    const { error: resendError } = await admin.auth.resetPasswordForEmail(email, {
+      redirectTo: `${getSiteUrl()}/accept-invite`,
+    });
+    if (resendError) return { error: `Couldn't resend: ${resendError.message}` };
+    // authUserId is already set from the original invite — nothing to update.
+  } else {
+    // First time this email has ever been through this flow — send the
+    // real invite (creates the Supabase Auth account and emails the link).
+    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${getSiteUrl()}/accept-invite`,
+      data: { name },
+    });
 
-  if (inviteError) {
-    if (!resendingForUserId) {
-      // Roll back the app-level row so a failed first invite doesn't leave
-      // a dangling, unusable account (and free up the unique email for retry).
-      await db.delete(users).where(eq(users.id, targetUserId));
+    if (inviteError) {
+      if (!existingByEmail) {
+        // Roll back the app-level row so a failed first invite doesn't
+        // leave a dangling, unusable account (and frees the email for retry).
+        await db.delete(users).where(eq(users.id, targetUserId));
+      }
+      return { error: `Couldn't send invite: ${inviteError.message}` };
     }
-    return { error: `Couldn't send invite: ${inviteError.message}` };
-  }
 
-  await db.update(users).set({ authUserId: invited.user.id }).where(eq(users.id, targetUserId));
+    await db.update(users).set({ authUserId: invited.user.id }).where(eq(users.id, targetUserId));
+  }
 
   if (participantId) {
     const roleOnCaseValues = role === "learner" ? (selfDirected ? ["learner", "practitioner"] : ["learner"]) : [role];
