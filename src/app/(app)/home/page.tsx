@@ -3,9 +3,9 @@ import { listParticipants, getParticipantPrograms, getMaintenancePlan, getAssign
 import { computeProgramReview } from "@/lib/review";
 import { getLabels } from "@/lib/labels";
 import { Card, SectionHeader, StatTile, Pill, LinkButton, EmptyState } from "@/components/ui";
-import { SelfDirectedTour } from "@/components/Tour";
+import { SelfDirectedTour, FullAccessTour } from "@/components/Tour";
 import Link from "next/link";
-import { isFullAccessRole } from "@/lib/rbac";
+import { isFullAccessRole, isOrgAdmin } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -57,9 +57,21 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-medium">{greeting()}, {user.name?.split(" ")[0]}.</h1>
-        <p className="text-ink-secondary mt-1">Here's what needs your attention today.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-medium">{greeting()}, {user.name?.split(" ")[0]}.</h1>
+          <p className="text-ink-secondary mt-1">Here's what needs your attention today.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link href="/guide" className="text-xs text-ink-muted hover:text-ink">Getting Started guide</Link>
+          <FullAccessTour
+            storageKey="gsl_tour_full_access_v1"
+            isOrgAdmin={isOrgAdmin(user.role)}
+            hasAnyParticipant={participants.length > 0}
+            firstParticipantId={participants[0]?.id}
+            firstProgramId={rows[0]?.program.id}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
