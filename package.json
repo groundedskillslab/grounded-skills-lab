@@ -9,17 +9,16 @@
     "lint": "eslint",
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
-    "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts"
+    "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts",
+    "auth:link": "dotenv -e .env.local -- tsx scripts/link-supabase-auth-users.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
-    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.0",
-    "next-auth": "^5.0.0-beta.32",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -29,7 +28,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

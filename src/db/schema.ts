@@ -19,12 +19,19 @@ export const organizations = pgTable("organizations", {
 });
 
 // role: org_admin | practitioner | implementer | caregiver | learner
+//
+// Password auth moved to Supabase Auth (2026-08-18) — this table no longer
+// stores password hashes. authUserId links each app-level profile row to
+// its corresponding auth.users.id in Supabase; it's how requireUser() (see
+// src/lib/session.ts) resolves "who's logged in" back to the app's role,
+// org, and title. Nullable because rows created before the linking script
+// runs (or in a fresh reseed) briefly have no linked auth account yet.
 export const users = pgTable("users", {
   id: id(),
   orgId: text("org_id").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  authUserId: text("auth_user_id").unique(),
   role: text("role").notNull(),
   title: text("title"), // e.g. "BCBA", "Head Coach", "Mom"
   createdAt: now(),

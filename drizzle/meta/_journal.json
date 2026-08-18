@@ -8,6 +8,20 @@
       "when": 1787015745498,
       "tag": "0000_greedy_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787026380327,
+      "tag": "0001_pink_gambit",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787026389406,
+      "tag": "0002_glossy_darkstar",
+      "breakpoints": true
     }
   ]
 }

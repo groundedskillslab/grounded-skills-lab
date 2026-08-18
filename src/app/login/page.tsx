@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { DEMO_PASSWORD } from "@/lib/demoAuth";
 
 const DEMO_USERS = [
   { role: "Org Admin", name: "Dana Reyes", email: "dana@groundedskillslab.demo" },
@@ -18,7 +19,6 @@ const DEMO_USERS = [
   { role: "Athlete / Learner", name: "Jamie Park", email: "jamie@groundedskillslab.demo" },
   { role: "Self-Directed Athlete", name: "Devon Ortiz", email: "devon@groundedskillslab.demo" },
 ];
-const DEMO_PASSWORD = "grounded123";
 
 export default function LoginPage() {
   return (
@@ -40,9 +40,10 @@ function LoginForm() {
   async function doSignIn(e: string, p: string) {
     setLoading(true);
     setError(null);
-    const res = await signIn("credentials", { email: e, password: p, redirect: false });
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: e, password: p });
     setLoading(false);
-    if (res?.error) {
+    if (signInError) {
       setError("That email and password combination wasn't found.");
       return;
     }

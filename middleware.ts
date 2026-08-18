@@ -1,10 +1,7 @@
-import NextAuth from "next-auth";
-import { NextResponse } from "next/server";
-import { authConfig } from "./auth.config";
+import { NextResponse, type NextRequest } from "next/server";
+import { createMiddlewareClient } from "@/lib/supabase/middleware";
 
-const { auth } = NextAuth(authConfig);
-
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = ["/login"];
 
 // Site-wide demo gate (added 2026-08-17, see architecture doc's
 // "Decided 2026-08-17" pre-deployment note). Every demo account shares
@@ -31,25 +28,38 @@ function siteAccessOk(req: Request): boolean {
   return password === sitePassword;
 }
 
-export default auth((req) => {
-  if (!siteAccessOk(req)) {
+export async function middleware(request: NextRequest) {
+  if (!siteAccessOk(request)) {
     return new NextResponse("Authentication required", {
       status: 401,
       headers: { "WWW-Authenticate": 'Basic realm="Grounded Skills Lab"' },
     });
   }
 
-  const { pathname } = req.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/_next") || pathname === "/favicon.ico";
-  if (isPublic) return NextResponse.next();
+  const { pathname } = request.nextUrl;
+  const isPublic =
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico";
 
-  if (!req.auth) {
-    const loginUrl = new URL("/login", req.nextUrl.origin);
+  // Supabase Auth (2026-08-18, replaced NextAuth) — this call both refreshes
+  // the session cookies (required so server components see a valid session
+  // on the next request) and tells us whether anyone's signed in.
+  const { supabase, getResponse } = createMiddlewareClient(request);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (isPublic) return getResponse();
+
+  if (!user) {
+    const loginUrl = new URL("/login", request.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
-  return NextResponse.next();
-});
+
+  return getResponse();
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|.*\\.png$|.*\\.svg$).*)"],

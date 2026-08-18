@@ -4,8 +4,12 @@
  * not separate products — plus a fifth self-directed case (no separate
  * coach) that demonstrates the merged practitioner+learner capability
  * model. Run with: npm run db:seed
+ *
+ * This only creates the app-level `users` rows (org/role/title/etc.) —
+ * since Supabase Auth started owning passwords (2026-08-18), it does NOT
+ * create login credentials. Run `npm run auth:link` after this to create
+ * the matching Supabase Auth accounts and link them via `authUserId`.
  */
-import bcrypt from "bcryptjs";
 import { sql } from "drizzle-orm";
 import { db } from "./index";
 import {
@@ -39,7 +43,6 @@ import {
 } from "./schema";
 
 const DAY = 24 * 60 * 60 * 1000;
-const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 const daysAgo = (n: number) => new Date(Date.now() - n * DAY);
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
@@ -67,8 +70,6 @@ async function main() {
     .values({ name: "Grounded Skills Lab Demo Org" })
     .returning();
 
-  const PASSWORD = "grounded123";
-
   const userSeed = [
     { key: "dana", name: "Dana Reyes", email: "dana@groundedskillslab.demo", role: "org_admin", title: "Organization Admin" },
     { key: "priya", name: "Priya Shah", email: "priya@groundedskillslab.demo", role: "practitioner", title: "BCBA" },
@@ -91,7 +92,7 @@ async function main() {
   for (const u of userSeed) {
     const [row] = await db
       .insert(users)
-      .values({ orgId: org.id, name: u.name, email: u.email, passwordHash: hash(PASSWORD), role: u.role, title: u.title })
+      .values({ orgId: org.id, name: u.name, email: u.email, role: u.role, title: u.title })
       .returning();
     userRows[u.key] = row;
   }
