@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createMiddlewareClient } from "@/lib/supabase/middleware";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/accept-invite"];
 
 // Site-wide demo gate (added 2026-08-17, see architecture doc's
 // "Decided 2026-08-17" pre-deployment note). Every demo account shares

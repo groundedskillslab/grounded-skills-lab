@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/session";
 import { listUsers, listAuditLogs, listParticipants, getUser } from "@/lib/data";
 import { isOrgAdmin, ROLE_LABELS } from "@/lib/rbac";
-import { Card, SectionHeader, Pill, EmptyState } from "@/components/ui";
+import { Card, SectionHeader, Pill, EmptyState, LinkButton } from "@/components/ui";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 
@@ -21,7 +21,11 @@ export default async function OrganizationPage() {
 
   return (
     <div className="space-y-8">
-      <SectionHeader title="Organization" subtitle="Accounts, permissions, and an audit trail of what's changed." />
+      <SectionHeader
+        title="Organization"
+        subtitle="Accounts, permissions, and an audit trail of what's changed."
+        action={<LinkButton href="/organization/invite">Invite Someone</LinkButton>}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
