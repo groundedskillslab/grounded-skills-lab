@@ -6,9 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 
 // Landed on from the link in an invite email (see src/actions/team.ts,
 // which calls admin.auth.admin.inviteUserByEmail with redirectTo pointing
-// here). The Supabase browser client auto-detects the session token in the
-// URL on load; this page just needs to let the person set a real password
-// before sending them into the app. Public path — see middleware.ts.
+// here), or from /auth/confirm's redirect for the token_hash-style links
+// Supabase uses for some flows (see that route). Confirmed 2026-08-18: this
+// project's invite links deliver the session as an implicit-style URL hash
+// fragment (`#access_token=...&refresh_token=...&type=invite`) rather than
+// a query param, and the browser Supabase client (@supabase/ssr) does NOT
+// reliably auto-detect/consume that fragment on its own here — so this page
+// parses it explicitly and calls setSession() itself instead of trusting
+// detectSessionInUrl. Public path — see middleware.ts.
 export default function AcceptInvitePage() {
   return (
     <Suspense fallback={null}>
@@ -28,10 +33,37 @@ function AcceptInviteForm() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+
+    async function resolveSession() {
+      // Hash fragments never reach the server, so only client JS can read
+      // this — parse it directly rather than relying on the client
+      // library's automatic detection.
+      const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+      const hashParams = new URLSearchParams(hash);
+      const access_token = hashParams.get("access_token");
+      const refresh_token = hashParams.get("refresh_token");
+
+      if (access_token && refresh_token) {
+        const { data, error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+        // Clear the tokens out of the visible URL/history either way —
+        // they're single-use but no reason to leave them sitting there.
+        window.history.replaceState(null, "", window.location.pathname);
+        if (!setSessionError && data.user) {
+          setEmail(data.user.email ?? null);
+          setReady(true);
+          return;
+        }
+      }
+
+      // No hash tokens (or setSession failed) — fall back to whatever
+      // session already exists, e.g. arrived via /auth/confirm having
+      // already established one server-side.
+      const { data } = await supabase.auth.getUser();
       if (data.user) setEmail(data.user.email ?? null);
       setReady(true);
-    });
+    }
+
+    resolveSession();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
