@@ -22,7 +22,20 @@ export default async function GuidePage() {
   }
 
   if (user.role === "learner") {
-    return <SelfDirectedGuide userId={user.id} />;
+    const selfDirected = await getSelfDirectedParticipant(user.id);
+    if (selfDirected) return <SelfDirectedGuide userId={user.id} />;
+    // A learner without the practitioner capability row is a coached
+    // learner, not a self-directed one — same track as a caregiver, just
+    // framed as "you" instead of "the person you support".
+    return <CaregiverGuide userId={user.id} orgId={user.orgId} role={user.role} subjectIsSelf />;
+  }
+
+  if (user.role === "caregiver") {
+    return <CaregiverGuide userId={user.id} orgId={user.orgId} role={user.role} subjectIsSelf={false} />;
+  }
+
+  if (user.role === "implementer") {
+    return <ImplementerGuide userId={user.id} orgId={user.orgId} role={user.role} />;
   }
 
   return <GenericGuide role={user.role} />;
@@ -376,6 +389,225 @@ async function FullAccessGuide({ userId, orgId, role, isAdmin }: { userId: strin
           </Card>
         )}
       </div>
+    </div>
+  );
+}
+
+async function ImplementerGuide({ userId, orgId, role }: { userId: string; orgId: string; role: string }) {
+  const participants = await listParticipants(orgId, userId, role);
+  const firstParticipant = participants[0];
+  const firstParticipantPrograms = firstParticipant ? await getParticipantPrograms(firstParticipant.id) : [];
+  const firstProgram = firstParticipantPrograms[0];
+  const labels = getLabels(firstParticipant?.workspaceType ?? "clinical");
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-8">
+      <div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-medium">Getting Started: Running Sessions</h1>
+          <Pill tone="brand">{labels.implementer}</Pill>
+        </div>
+        <p className="text-ink-secondary mt-2">
+          Building a {labels.program.toLowerCase()} is your {labels.practitioner.toLowerCase()}'s call. Your part of
+          the loop is Practice — running {labels.sessionPlural.toLowerCase()} and logging progress for whoever
+          you're assigned to.
+        </p>
+        <p className="text-sm text-ink-muted mt-2 italic font-body">Practice. Measure. Improve. Repeat.</p>
+      </div>
+
+      {participants.length === 0 && (
+        <Card className="border-l-4 border-l-brand">
+          <div className="font-medium mb-1">Nobody's assigned to you yet</div>
+          <p className="text-sm text-ink-secondary">
+            Check with your {labels.practitioner.toLowerCase()} or org admin — once you're added to a participant's
+            team, this guide will link straight to their pages.
+          </p>
+        </Card>
+      )}
+
+      <div className="space-y-5">
+        <Card>
+          <div className="flex gap-4">
+            <StepBadge n={1} />
+            <div className="flex-1">
+              <SectionHeader title="People: who you're assigned to" subtitle="Open a profile before you work with them." />
+              <p className="text-sm text-ink-secondary mb-3">
+                Every participant you're assigned to shows up here. Open one to see their {labels.program.toLowerCase()},{" "}
+                {labels.prompt.toLowerCase()} hierarchy, and recent {labels.sessionPlural.toLowerCase()} before you
+                start.
+              </p>
+              {participants.length > 0 && <LinkButton href="/people" variant="secondary">Open People</LinkButton>}
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex gap-4">
+            <StepBadge n={2} />
+            <div className="flex-1">
+              <SectionHeader title={`Practice: run a ${labels.session.toLowerCase()}`} subtitle="Structured, rep-by-rep data collection." />
+              <p className="text-sm text-ink-secondary mb-3">
+                Pick who you're working with — their {labels.prompt.toLowerCase()} hierarchy and targets load in
+                automatically, so you're just scoring as you go.
+              </p>
+              <LinkButton
+                href={firstParticipant ? `/sessions/new?participantId=${firstParticipant.id}` : "/sessions/new"}
+                variant="secondary"
+              >
+                Start a {labels.session.toLowerCase()}
+              </LinkButton>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex gap-4">
+            <StepBadge n={3} />
+            <div className="flex-1">
+              <SectionHeader title="Practice Mode — the lighter log" subtitle="For homework-style practice and anything assigned to you." />
+              <p className="text-sm text-ink-secondary mb-3">
+                See what's been assigned to you specifically, and log practice that happens outside a formal{" "}
+                {labels.session.toLowerCase()}.
+              </p>
+              <LinkButton href="/practice" variant="secondary">Open Practice</LinkButton>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex gap-4">
+            <StepBadge n={4} />
+            <div className="flex-1">
+              <SectionHeader title="Check progress before you go in" subtitle="Read-only, but useful." />
+              <p className="text-sm text-ink-secondary mb-3">
+                See how things are trending for the people you support — a fast way to walk in prepared without
+                asking first.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <LinkButton href="/analytics" variant="secondary">Analytics Board</LinkButton>
+                {firstProgram && (
+                  <LinkButton href={`/analytics/${firstProgram.id}`} variant="secondary">
+                    {firstProgram.name} chart
+                  </LinkButton>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="bg-plane border-0">
+        <div className="font-medium mb-1">What's not yours to do</div>
+        <p className="text-sm text-ink-secondary">
+          Building or editing a {labels.program.toLowerCase()} — the operational definition, task analysis,{" "}
+          {labels.mastery.toLowerCase()} criteria — is scoped to whoever holds {labels.practitioner.toLowerCase()}{" "}
+          capability on that case. If something about the plan itself needs to change, that's a conversation with
+          them, not something to edit directly.
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+async function CaregiverGuide({
+  userId,
+  orgId,
+  role,
+  subjectIsSelf,
+}: {
+  userId: string;
+  orgId: string;
+  role: string;
+  subjectIsSelf: boolean;
+}) {
+  const participants = await listParticipants(orgId, userId, role);
+  const firstParticipant = participants[0];
+  const labels = getLabels(firstParticipant?.workspaceType ?? "general");
+  const whoseProgress = subjectIsSelf ? "your progress" : "their progress";
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-medium">
+            {subjectIsSelf ? "Getting Started: Tracking Your Practice" : "Getting Started: Supporting Practice"}
+          </h1>
+          <Pill tone="brand">{labels.caregiver}</Pill>
+        </div>
+        <p className="text-ink-secondary mt-2">
+          This app runs a full Define → Teach → Practice → Measure → Analyze → Adjust → Generalize → Maintain loop,
+          but {subjectIsSelf ? "your" : "your"} part of it is simple: log practice as it happens, and check in on{" "}
+          {whoseProgress} whenever you want.
+        </p>
+        <p className="text-sm text-ink-muted mt-2 italic font-body">Practice. Measure. Improve. Repeat.</p>
+      </div>
+
+      {participants.length === 0 && (
+        <Card className="border-l-4 border-l-brand">
+          <div className="font-medium mb-1">Nothing linked to your account yet</div>
+          <p className="text-sm text-ink-secondary">
+            Once {subjectIsSelf ? "you're" : "you're"} connected to a participant, this guide will link straight to
+            {subjectIsSelf ? " your" : " their"} pages.
+          </p>
+        </Card>
+      )}
+
+      <div className="space-y-5">
+        <Card>
+          <div className="flex gap-4">
+            <StepBadge n={1} />
+            <div className="flex-1">
+              <SectionHeader title="Assigned practice" subtitle="Log practice as it happens — no formal session needed." />
+              <p className="text-sm text-ink-secondary mb-3">
+                Home shows what's been assigned to log. It's a quick way to keep a record of{" "}
+                {subjectIsSelf ? "your own practice" : "the practice you support"} without a formal{" "}
+                {labels.session.toLowerCase()}.
+              </p>
+              <LinkButton href="/practice" variant="secondary">Open Practice</LinkButton>
+            </div>
+          </div>
+        </Card>
+
+        {firstParticipant && (
+          <Card>
+            <div className="flex gap-4">
+              <StepBadge n={2} />
+              <div className="flex-1">
+                <SectionHeader
+                  title={subjectIsSelf ? "Your profile" : "Their profile"}
+                  subtitle={`See ${subjectIsSelf ? "your" : "their"} ${labels.program.toLowerCase()}s, recent ${labels.sessionPlural.toLowerCase()}, and where things stand.`}
+                />
+                <p className="text-sm text-ink-secondary mb-3">Read-only, but everything's there.</p>
+                <LinkButton href={`/people/${firstParticipant.id}`} variant="secondary">
+                  {subjectIsSelf ? "See your profile" : "See their profile"}
+                </LinkButton>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <Card>
+          <div className="flex gap-4">
+            <StepBadge n={3} />
+            <div className="flex-1">
+              <SectionHeader title="Analytics" subtitle={`A trend view of ${whoseProgress} — Progressing, Stable, or Needs Review.`} />
+              <p className="text-sm text-ink-secondary mb-3">A quick way to see how things are going without having to ask.</p>
+              <LinkButton href="/analytics" variant="secondary">Open Analytics</LinkButton>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="bg-plane border-0">
+        <div className="font-medium mb-1">Building the plan itself</div>
+        <p className="text-sm text-ink-secondary">
+          {labels.program}s, formal {labels.sessionPlural.toLowerCase()}, and any changes to{" "}
+          {subjectIsSelf ? "your" : "the"} plan are handled by {subjectIsSelf ? "your" : "their"}{" "}
+          {labels.practitioner.toLowerCase()} — reach out to them with questions about the plan itself.
+          {subjectIsSelf &&
+            " If you'd rather run your own practice end-to-end, ask about self-directed access — it's a separate capability an org admin can grant on your profile."}
+        </p>
+      </Card>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { listParticipants, getParticipantPrograms, getMaintenancePlan, getAssign
 import { computeProgramReview } from "@/lib/review";
 import { getLabels } from "@/lib/labels";
 import { Card, SectionHeader, StatTile, Pill, LinkButton, EmptyState } from "@/components/ui";
-import { SelfDirectedTour, FullAccessTour } from "@/components/Tour";
+import { SelfDirectedTour, FullAccessTour, ImplementerTour, CaregiverTour } from "@/components/Tour";
 import Link from "next/link";
 import { isFullAccessRole, isOrgAdmin } from "@/lib/rbac";
 
@@ -20,7 +20,7 @@ export default async function HomePage() {
   const user = await requireUser();
 
   if (!isFullAccessRole(user.role)) {
-    return <SimpleHome userId={user.id} name={user.name || ""} role={user.role} />;
+    return <SimpleHome userId={user.id} orgId={user.orgId} name={user.name || ""} role={user.role} />;
   }
 
   const participants = await listParticipants(user.orgId, user.id, user.role);
@@ -182,13 +182,18 @@ export default async function HomePage() {
   );
 }
 
-async function SimpleHome({ userId, name, role }: { userId: string; name: string; role: string }) {
+async function SimpleHome({ userId, orgId, name, role }: { userId: string; orgId: string; name: string; role: string }) {
   const isLearner = role === "learner";
   const isCaregiver = role === "caregiver";
+  const isImplementer = role === "implementer";
   const assignments = await getAssignmentsForUser(userId);
+
   const selfDirectedParticipant = isLearner ? await getSelfDirectedParticipant(userId) : undefined;
-  const labels = getLabels(selfDirectedParticipant?.workspaceType ?? "general");
-  const programs = selfDirectedParticipant ? await getParticipantPrograms(selfDirectedParticipant.id) : [];
+  const otherParticipants = selfDirectedParticipant ? [] : await listParticipants(orgId, userId, role);
+  const firstParticipant = selfDirectedParticipant ?? otherParticipants[0];
+  const labels = getLabels(firstParticipant?.workspaceType ?? "general");
+  const programs = firstParticipant ? await getParticipantPrograms(firstParticipant.id) : [];
+  const firstProgram = programs[0];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -199,28 +204,56 @@ async function SimpleHome({ userId, name, role }: { userId: string; name: string
             {isLearner ? "Here's what you're working on." : isCaregiver ? "Here's today's practice." : "Here's what's assigned to you."}
           </p>
         </div>
-        {isLearner && (
+        {isLearner && selfDirectedParticipant && (
           <SelfDirectedTour
             storageKey="gsl_tour_self_directed_v1"
-            participantId={selfDirectedParticipant?.id}
-            firstProgramId={programs[0]?.id}
+            participantId={selfDirectedParticipant.id}
+            firstProgramId={firstProgram?.id}
             programLabel={labels.program}
             sessionLabel={labels.session}
           />
         )}
+        {isLearner && !selfDirectedParticipant && (
+          <CaregiverTour
+            storageKey="gsl_tour_coached_learner_v1"
+            subjectIsSelf
+            hasParticipant={!!firstParticipant}
+            firstParticipantId={firstParticipant?.id}
+            practitionerLabel={labels.practitioner}
+          />
+        )}
+        {isImplementer && (
+          <ImplementerTour
+            storageKey="gsl_tour_implementer_v1"
+            hasAnyParticipant={otherParticipants.length > 0}
+            firstParticipantId={firstParticipant?.id}
+            firstProgramId={firstProgram?.id}
+            sessionLabel={labels.session}
+            programLabel={labels.program}
+          />
+        )}
+        {isCaregiver && (
+          <CaregiverTour
+            storageKey="gsl_tour_caregiver_v1"
+            subjectIsSelf={false}
+            hasParticipant={!!firstParticipant}
+            firstParticipantId={firstParticipant?.id}
+            practitionerLabel={labels.practitioner}
+          />
+        )}
       </div>
 
-      {isLearner && selfDirectedParticipant && (
-        <Card className="bg-brand-soft border-0">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <div className="text-sm text-brand-ink font-medium">Training yourself: {selfDirectedParticipant.displayName}</div>
-              <div className="text-xs text-ink-muted mt-0.5">New here? The Getting Started guide walks through the whole loop.</div>
+      <Card className="bg-brand-soft border-0">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-sm text-brand-ink font-medium">
+              {selfDirectedParticipant ? `Training yourself: ${selfDirectedParticipant.displayName}` : "New here?"}
             </div>
-            <LinkButton href="/guide" variant="secondary">Getting Started guide</LinkButton>
+            <div className="text-xs text-ink-muted mt-0.5">The Getting Started guide walks through what's yours to do.</div>
           </div>
-        </Card>
-      )}
+          <LinkButton href="/guide" variant="secondary">Getting Started guide</LinkButton>
+        </div>
+      </Card>
 
       <Card>
         <SectionHeader title="Assigned Practice" />
@@ -242,8 +275,10 @@ async function SimpleHome({ userId, name, role }: { userId: string; name: string
       </Card>
       <div className="flex gap-2 flex-wrap">
         <LinkButton href="/practice" variant="secondary">Go to Practice Mode</LinkButton>
-        {selfDirectedParticipant && (
-          <LinkButton href={`/people/${selfDirectedParticipant.id}`} variant="secondary">Go to your profile</LinkButton>
+        {firstParticipant && (
+          <LinkButton href={`/people/${firstParticipant.id}`} variant="secondary">
+            {selfDirectedParticipant ? "Go to your profile" : "Open a participant"}
+          </LinkButton>
         )}
       </div>
     </div>

@@ -295,3 +295,136 @@ export function FullAccessTour(props: {
   const { storageKey, autoShowOnce, ...stepOpts } = props;
   return <GuidedTour steps={buildFullAccessSteps(stepOpts)} storageKey={storageKey} autoShowOnce={autoShowOnce} />;
 }
+
+function buildImplementerSteps(opts: {
+  hasAnyParticipant: boolean;
+  firstParticipantId?: string;
+  firstProgramId?: string;
+  sessionLabel: string;
+  programLabel: string;
+}): TourStep[] {
+  const { hasAnyParticipant, firstParticipantId, firstProgramId, sessionLabel, programLabel } = opts;
+  const steps: TourStep[] = [
+    {
+      title: "Welcome — you run sessions for the people you support",
+      body: `Building a ${programLabel.toLowerCase()} is your practitioner's call — your part of the loop is Practice: running sessions and logging progress for whoever you're assigned to. A quick tour of what's yours to do.`,
+    },
+    {
+      title: "People — who you're assigned to",
+      body: hasAnyParticipant
+        ? "Open a participant to see their program, prompt hierarchy, and recent sessions before you work with them."
+        : "Nobody's assigned to you yet — check with your practitioner or org admin.",
+      href: hasAnyParticipant ? "/people" : undefined,
+      hrefLabel: hasAnyParticipant ? "Open People" : undefined,
+    },
+    {
+      title: `Practice: run a ${sessionLabel.toLowerCase()}`,
+      body: "Structured, rep-by-rep data collection. Pick who you're working with — the prompt hierarchy and targets they're already set up with load in automatically.",
+      href: firstParticipantId ? `/sessions/new?participantId=${firstParticipantId}` : "/sessions/new",
+      hrefLabel: `Start a ${sessionLabel}`,
+    },
+    {
+      title: "Practice Mode — the lighter log",
+      body: "For homework-style practice between formal sessions, and anything assigned to you specifically.",
+      href: "/practice",
+      hrefLabel: "Open Practice",
+    },
+  ];
+
+  steps.push({
+    title: "Check progress before you go in",
+    body: "You can see how things are trending — read-only, but a good way to walk in prepared.",
+    href: firstProgramId ? `/analytics/${firstProgramId}` : "/analytics",
+    hrefLabel: "Open Analytics",
+  });
+
+  steps.push({
+    title: "That's the loop",
+    body: "Practice. Measure. Improve. Repeat.",
+  });
+
+  return steps;
+}
+
+export function ImplementerTour(props: {
+  storageKey: string;
+  autoShowOnce?: boolean;
+  hasAnyParticipant: boolean;
+  firstParticipantId?: string;
+  firstProgramId?: string;
+  sessionLabel: string;
+  programLabel: string;
+}) {
+  const { storageKey, autoShowOnce, ...stepOpts } = props;
+  return <GuidedTour steps={buildImplementerSteps(stepOpts)} storageKey={storageKey} autoShowOnce={autoShowOnce} />;
+}
+
+function buildCaregiverSteps(opts: {
+  subjectIsSelf: boolean;
+  hasParticipant: boolean;
+  firstParticipantId?: string;
+  practitionerLabel: string;
+}): TourStep[] {
+  const { subjectIsSelf, hasParticipant, firstParticipantId, practitionerLabel } = opts;
+  const whoseProgress = subjectIsSelf ? "your progress" : "their progress";
+  const yourWork = subjectIsSelf ? "your own" : "the practice you support";
+
+  const steps: TourStep[] = [
+    {
+      title: subjectIsSelf ? "Welcome — here's how to track your practice" : "Welcome — here's how to support their practice",
+      body: `This app runs a full Define → Teach → Practice → Measure → Analyze → Adjust → Generalize → Maintain loop, but ${
+        subjectIsSelf ? "your" : "your"
+      } part of it is simple: log practice as it happens, and check in on ${whoseProgress} whenever you want.`,
+    },
+    {
+      title: "Assigned practice",
+      body: `Home shows what's been assigned to log — a quick way to keep a record of ${yourWork} without a formal session.`,
+      href: "/practice",
+      hrefLabel: "Open Practice",
+    },
+  ];
+
+  if (hasParticipant && firstParticipantId) {
+    steps.push({
+      title: subjectIsSelf ? "Your profile" : "Their profile",
+      body: subjectIsSelf
+        ? "See your own programs, recent sessions, and where things stand — read-only, but everything's there."
+        : "See their programs, recent sessions, and where things stand — read-only, but everything's there.",
+      href: `/people/${firstParticipantId}`,
+      hrefLabel: subjectIsSelf ? "See your profile" : "See their profile",
+    });
+  }
+
+  steps.push({
+    title: "Analytics",
+    body: `A trend view of ${whoseProgress} — Progressing, Stable, or Needs Review — without having to ask.`,
+    href: "/analytics",
+    hrefLabel: "Open Analytics",
+  });
+
+  steps.push({
+    title: "Building the plan itself",
+    body: `Programs, formal sessions, and any changes to the plan are handled by ${
+      subjectIsSelf ? "your" : "their"
+    } ${practitionerLabel.toLowerCase()} — reach out to them with questions about the plan itself.`,
+  });
+
+  steps.push({
+    title: "That's the loop",
+    body: "Practice. Measure. Improve. Repeat.",
+  });
+
+  return steps;
+}
+
+export function CaregiverTour(props: {
+  storageKey: string;
+  autoShowOnce?: boolean;
+  subjectIsSelf: boolean;
+  hasParticipant: boolean;
+  firstParticipantId?: string;
+  practitionerLabel: string;
+}) {
+  const { storageKey, autoShowOnce, ...stepOpts } = props;
+  return <GuidedTour steps={buildCaregiverSteps(stepOpts)} storageKey={storageKey} autoShowOnce={autoShowOnce} />;
+}
