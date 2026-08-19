@@ -15,7 +15,16 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local and fill in your Supabase connection string.");
 }
 
-const sql = postgres(connectionString, { prepare: false });
+// max: 1 pins this script to a single physical connection. rls-policies.sql
+// is one big multi-statement file sent via sql.unsafe() — Postgres runs a
+// multi-statement batch like that as an implicit transaction (its first
+// response is literally a 'BEGIN' command tag), and postgres.js refuses to
+// run that over an ordinary pooled connection (error: UNSAFE_TRANSACTION)
+// because a later statement could otherwise be routed to a different
+// physical connection, silently breaking the transaction. With max: 1
+// there's only ever one connection, so that risk doesn't exist and the
+// guard doesn't fire.
+const sql = postgres(connectionString, { prepare: false, max: 1 });
 const filePath = join(__dirname, "..", "supabase", "rls-policies.sql");
 
 async function main() {

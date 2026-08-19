@@ -12,6 +12,7 @@
  *
  * Run with: npm run rls:verify
  */
+import { randomUUID } from "crypto";
 import postgres from "postgres";
 
 const connectionString = process.env.DATABASE_URL;
@@ -112,8 +113,12 @@ async function main() {
     const c = caregivers[0];
     let blocked = false;
     try {
+      // sessions.id has no database-level default (only a Drizzle-side
+      // $defaultFn, which doesn't apply to raw SQL) — must supply one
+      // explicitly, or the insert fails on a NOT NULL violation before
+      // RLS is even evaluated, making this check pass for the wrong reason.
       await asUser(c.auth_user_id, (tx) =>
-        tx`insert into sessions (participant_id, conducted_by_user_id, date) values (${c.participant_id}, ${c.id}, now())`
+        tx`insert into sessions (id, participant_id, conducted_by_user_id, date) values (${randomUUID()}, ${c.participant_id}, ${c.id}, now())`
       );
     } catch {
       blocked = true;
@@ -138,7 +143,7 @@ async function main() {
     let allowed = false;
     try {
       await asUser(r.auth_user_id, (tx) =>
-        tx`insert into sessions (participant_id, conducted_by_user_id, date) values (${r.participant_id}, ${r.id}, now())`
+        tx`insert into sessions (id, participant_id, conducted_by_user_id, date) values (${randomUUID()}, ${r.participant_id}, ${r.id}, now())`
       );
       allowed = true;
     } catch {
