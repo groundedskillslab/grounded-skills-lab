@@ -158,3 +158,83 @@ export async function inviteTeamMember(_prevState: InviteFormState, formData: Fo
   revalidatePath("/organization");
   redirect("/organization");
 }
+
+// Grants or revokes self-directed status on an EXISTING learner who's
+// already linked to their own participant record — i.e. adds/removes the
+// "practitioner" participantAssignments row alongside their existing
+// "learner" row, the same dual-capability pattern inviteTeamMember's
+// selfDirected checkbox grants at invite time. This is what closes the gap
+// flagged in the architecture doc: capability was previously only settable
+// at invite/signup time, with no way to change it after the fact.
+export async function setSelfDirected(formData: FormData) {
+  const admin = await requireUser();
+  if (!isOrgAdmin(admin.role)) redirect("/people");
+
+  const targetUserId = String(formData.get("userId") || "");
+  const participantId = String(formData.get("participantId") || "");
+  const enable = formData.get("enable") === "true";
+
+  const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
+  if (!targetUser || targetUser.orgId !== admin.orgId) redirect("/people");
+  // Self-directed only makes sense for someone whose global role is
+  // "learner" — mirrors the same restriction the invite form's checkbox
+  // has (it only renders when role === "learner").
+  if (targetUser.role !== "learner") redirect(`/people/${participantId}`);
+
+  const [participant] = await db.select().from(participants).where(eq(participants.id, participantId)).limit(1);
+  if (!participant || participant.orgId !== admin.orgId) redirect("/people");
+
+  // Only grant/revoke on a participant this user is actually the learner
+  // for — self-directed means "manages their own case," so there must be
+  // an existing "learner" row on this exact participant to build on.
+  const [learnerRow] = await db
+    .select()
+    .from(participantAssignments)
+    .where(
+      and(
+        eq(participantAssignments.userId, targetUserId),
+        eq(participantAssignments.participantId, participantId),
+        eq(participantAssignments.roleOnCase, "learner")
+      )
+    )
+    .limit(1);
+  if (!learnerRow) redirect(`/people/${participantId}`);
+
+  const [practitionerRow] = await db
+    .select()
+    .from(participantAssignments)
+    .where(
+      and(
+        eq(participantAssignments.userId, targetUserId),
+        eq(participantAssignments.participantId, participantId),
+        eq(participantAssignments.roleOnCase, "practitioner")
+      )
+    )
+    .limit(1);
+
+  if (enable && !practitionerRow) {
+    await db.insert(participantAssignments).values({ participantId, userId: targetUserId, roleOnCase: "practitioner" });
+    await logAudit({
+      orgId: admin.orgId,
+      userId: admin.id,
+      action: "self_directed_granted",
+      entityType: "participant_assignment",
+      entityId: participantId,
+      metadata: { targetUserId },
+    });
+  } else if (!enable && practitionerRow) {
+    await db.delete(participantAssignments).where(eq(participantAssignments.id, practitionerRow.id));
+    await logAudit({
+      orgId: admin.orgId,
+      userId: admin.id,
+      action: "self_directed_revoked",
+      entityType: "participant_assignment",
+      entityId: participantId,
+      metadata: { targetUserId },
+    });
+  }
+  // No-op if the state already matches what was requested — keeps this
+  // action idempotent for a double-click or a stale form resubmit.
+
+  revalidatePath(`/people/${participantId}`);
+}

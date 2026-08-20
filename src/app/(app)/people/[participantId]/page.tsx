@@ -8,8 +8,9 @@ import {
   getParticipantSessions,
 } from "@/lib/data";
 import { getLabels, WORKSPACE_TYPES, JOURNEY_STAGES } from "@/lib/labels";
-import { userCanAccessParticipant, canManagePrograms, canRunSessions } from "@/lib/rbac";
+import { userCanAccessParticipant, canManagePrograms, canRunSessions, isOrgAdmin } from "@/lib/rbac";
 import { ROLE_LABELS } from "@/lib/roles";
+import { setSelfDirected } from "@/actions/team";
 import { Card, SectionHeader, Pill, JourneyBar, LinkButton, EmptyState } from "@/components/ui";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -54,6 +55,18 @@ export default async function ParticipantProfilePage({ params }: { params: Promi
   }
 
   const masteredCount = programsList.filter((p) => p.journeyStage === "mastered" || p.journeyStage === "maintenance").length;
+
+  // Group raw assignment rows by user — a self-directed person has two rows
+  // (one "learner", one "practitioner") for the same participant, and
+  // should render as one line with both capabilities reflected rather than
+  // two separate entries.
+  const teamByUser = new Map<string, { user: (typeof team)[number]["user"]; roles: string[] }>();
+  for (const t of team) {
+    if (!teamByUser.has(t.user.id)) teamByUser.set(t.user.id, { user: t.user, roles: [] });
+    teamByUser.get(t.user.id)!.roles.push(t.assignment.roleOnCase);
+  }
+  const teamMembers = [...teamByUser.values()];
+  const canManageCapabilities = isOrgAdmin(user.role);
 
   return (
     <div className="space-y-8">
@@ -152,15 +165,39 @@ export default async function ParticipantProfilePage({ params }: { params: Promi
           <Card>
             <SectionHeader title="Care Team" />
             <ul className="space-y-3">
-              {team.map((t) => (
-                <li key={t.assignment.id} className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">{t.user.name}</div>
-                    <div className="text-xs text-ink-muted">{t.user.title || ROLE_LABELS[t.user.role as keyof typeof ROLE_LABELS]}</div>
-                  </div>
-                  <Pill tone="neutral">{t.assignment.roleOnCase}</Pill>
-                </li>
-              ))}
+              {teamMembers.map(({ user: member, roles }) => {
+                const isLearnerHere = roles.includes("learner");
+                const isSelfDirected = isLearnerHere && roles.includes("practitioner");
+                // The self-directed toggle only makes sense for this
+                // participant's own learner — not a coach/caregiver who
+                // separately happens to hold a "learner" row elsewhere.
+                const canToggle = canManageCapabilities && member.role === "learner" && isLearnerHere;
+                return (
+                  <li key={member.id} className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium">{member.name}</div>
+                      <div className="text-xs text-ink-muted">{member.title || ROLE_LABELS[member.role as keyof typeof ROLE_LABELS]}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isSelfDirected ? (
+                        <Pill tone="brand">Self-directed</Pill>
+                      ) : (
+                        roles.map((r) => <Pill key={r} tone="neutral">{r}</Pill>)
+                      )}
+                      {canToggle && (
+                        <form action={setSelfDirected}>
+                          <input type="hidden" name="userId" value={member.id} />
+                          <input type="hidden" name="participantId" value={participant.id} />
+                          <input type="hidden" name="enable" value={isSelfDirected ? "false" : "true"} />
+                          <button type="submit" className="text-xs text-ink-muted underline hover:text-ink">
+                            {isSelfDirected ? "Remove" : "Make self-directed"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </Card>
         </div>
