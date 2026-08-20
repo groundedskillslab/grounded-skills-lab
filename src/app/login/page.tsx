@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DEMO_PASSWORD } from "@/lib/demoAuth";
@@ -32,6 +33,7 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/home";
+  const justSignedUp = params.get("justSignedUp") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,12 @@ function LoginForm() {
       <div className="flex flex-col justify-center px-6 sm:px-12 py-12">
         <div className="max-w-sm w-full mx-auto">
           <h2 className="text-2xl font-medium mb-1">Sign in</h2>
-          <p className="text-ink-secondary mb-8 text-sm">Welcome back to Grounded Skills Lab.</p>
+          <p className="text-ink-secondary mb-2 text-sm">Welcome back to Grounded Skills Lab.</p>
+          {justSignedUp && (
+            <p className="text-sm text-status-good mb-6">
+              Account created — sign in with the password you just set.
+            </p>
+          )}
 
           <form
             className="space-y-3"
@@ -114,6 +121,13 @@ function LoginForm() {
               {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
+
+          <p className="text-sm mt-6">
+            Working on your own, with no coach or organization?{" "}
+            <Link href="/signup" className="text-brand underline">
+              Create your own account
+            </Link>
+          </p>
 
           <div className="mt-10">
             <div className="text-xs uppercase tracking-wide text-ink-muted mb-3">Demo accounts (password: {DEMO_PASSWORD})</div>
