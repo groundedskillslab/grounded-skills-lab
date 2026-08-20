@@ -2,11 +2,12 @@
 
 import { requireUser } from "@/lib/session";
 import { db } from "@/db";
-import { practiceLogs, assignments, users, programs } from "@/db/schema";
+import { practiceLogs, assignments, users, programs, participants } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logAudit } from "@/lib/audit";
+import { isFullAccessRole, canManagePrograms, userCanAccessParticipant } from "@/lib/rbac";
 
 export async function logPractice(formData: FormData) {
   const user = await requireUser();
@@ -25,6 +26,28 @@ export async function logPractice(formData: FormData) {
   const contextTags = contextTagsRaw ? contextTagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
   if (!result) return;
+
+  // Server Actions are reachable directly, not just via the page that
+  // renders their form — so the page's own access check (see
+  // /practice/log/[assignmentId]) doesn't protect this. Re-derive the
+  // assignment/participant from the database (never trust the client-
+  // submitted participantId on its own) and confirm this user actually has
+  // standing to log against it before writing anything.
+  const [participant] = await db.select().from(participants).where(eq(participants.id, participantId)).limit(1);
+  if (!participant || participant.orgId !== user.orgId) redirect("/practice");
+
+  let allowed: boolean;
+  if (assignmentId) {
+    const [assignment] = await db.select().from(assignments).where(eq(assignments.id, assignmentId)).limit(1);
+    if (!assignment || assignment.participantId !== participantId) redirect("/practice");
+    allowed = assignment.assignedToUserId === user.id || isFullAccessRole(user.role) || (await canManagePrograms(user, participantId));
+  } else {
+    // No assignment context (an ad-hoc log) — fall back to general
+    // participant access rather than assignedToUserId, which only applies
+    // when there's an actual assignment to check it against.
+    allowed = await userCanAccessParticipant(user.id, user.role, participantId);
+  }
+  if (!allowed) redirect("/practice");
 
   await db.insert(practiceLogs).values({
     assignmentId: assignmentId || null,
@@ -56,6 +79,15 @@ export async function createAssignment(formData: FormData) {
   const dueDateRaw = String(formData.get("dueDate") || "");
 
   if (!title) return;
+
+  // Same reasoning as logPractice above: the Assign form is only shown to
+  // full-access/implementer roles in the UI, but the action itself is
+  // reachable directly, so it needs its own check rather than trusting the
+  // page it's normally called from.
+  const [participant] = await db.select().from(participants).where(eq(participants.id, participantId)).limit(1);
+  if (!participant || participant.orgId !== user.orgId) redirect("/practice");
+  const allowed = isFullAccessRole(user.role) || (await canManagePrograms(user, participantId));
+  if (!allowed) redirect("/practice");
 
   await db.insert(assignments).values({
     participantId, programId, title, instructions, frequency,

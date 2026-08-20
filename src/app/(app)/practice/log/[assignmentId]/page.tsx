@@ -1,9 +1,10 @@
 import { requireUser } from "@/lib/session";
 import { getAssignment, getParticipant, getProgram, getProgramTargets } from "@/lib/data";
 import { getLabels } from "@/lib/labels";
+import { isFullAccessRole, canManagePrograms } from "@/lib/rbac";
 import { Card } from "@/components/ui";
 import { PracticeLogForm } from "@/components/PracticeLogForm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export default async function PracticeLogPage({ params }: { params: Promise<{ assignmentId: string }> }) {
   const { assignmentId } = await params;
@@ -11,7 +12,18 @@ export default async function PracticeLogPage({ params }: { params: Promise<{ as
   const assignment = await getAssignment(assignmentId);
   if (!assignment) notFound();
   const participant = await getParticipant(assignment.participantId);
-  if (!participant) notFound();
+  if (!participant || participant.orgId !== user.orgId) notFound();
+
+  // Only the person this practice was actually assigned to, or someone who
+  // can manage this participant's programs (a practitioner checking in on
+  // assigned work), should be able to view or log against it — mirrors the
+  // assignedToUserId scoping getAssignmentsForUser() already uses to build
+  // the "what's assigned to you" list on /practice. Without this, any
+  // signed-in user could view (and, via logPractice, write to) another
+  // participant's practice log just by knowing/guessing an assignment id.
+  const allowed = assignment.assignedToUserId === user.id || isFullAccessRole(user.role) || (await canManagePrograms(user, participant.id));
+  if (!allowed) redirect("/practice");
+
   const program = assignment.programId ? await getProgram(assignment.programId) : null;
   const targets = assignment.programId ? await getProgramTargets(assignment.programId) : [];
   const labels = getLabels(participant.workspaceType);
