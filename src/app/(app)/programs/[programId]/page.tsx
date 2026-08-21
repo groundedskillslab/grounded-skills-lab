@@ -11,6 +11,7 @@ import { getLabels, JOURNEY_STAGES, MEASUREMENT_TYPES, GENERALIZATION_DIMENSIONS
 import { MASTERY_CRITERIA_PRESETS } from "@/lib/mastery";
 import { userCanAccessParticipant, canManagePrograms } from "@/lib/rbac";
 import { Card, SectionHeader, Pill, JourneyBar, LinkButton, EmptyState } from "@/components/ui";
+import { HelpDisclosure } from "@/components/HelpDisclosure";
 import { Tabs } from "@/components/Tabs";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
@@ -200,6 +201,20 @@ function TaskAnalysisTab({ programId, steps, canManage }: any) {
 function MeasurementTab({ programId, targets, labels, canManage, masteryChecks }: any) {
   return (
     <div className="space-y-6">
+      <div className="flex justify-end -mb-2">
+        <HelpDisclosure label="What does &quot;mastery&quot; mean?">
+          <p>
+            Mastery just means a skill has been performed well enough, and consistently enough, that it&apos;s
+            considered learned rather than still being taught. The exact bar — how many sessions, what percentage,
+            how many different people or settings — is whatever gets set as the &quot;Mastery Rule&quot; below.
+          </p>
+          <p className="text-ink-muted">
+            Once the recorded data hits that bar, you&apos;ll see a prompt to confirm it. Confirming isn&apos;t
+            automatic on purpose — it&apos;s a moment to double-check the data actually reflects real understanding
+            before calling it done.
+          </p>
+        </HelpDisclosure>
+      </div>
       {targets.map((t: any) => {
         const mc = masteryChecks.find((m: any) => m.target.id === t.id);
         return (
@@ -302,7 +317,23 @@ function GeneralizationTab({ programId, dims, probes, targets, canManage }: any)
   return (
     <div className="space-y-6">
       <Card>
-        <SectionHeader title="Generalization Matrix" subtitle="Where has this skill transferred, and where hasn't it been probed yet?" />
+        <SectionHeader
+          title="Generalization Matrix"
+          subtitle="Where has this skill transferred, and where hasn't it been probed yet?"
+          action={
+            <HelpDisclosure>
+              <p>
+                Generalization just means the skill still works outside the exact spot it was first learned in —
+                a new location, a new person, a different time of day, real equipment instead of practice gear.
+              </p>
+              <p className="text-ink-muted">
+                A <strong>dimension</strong> is whichever of those you want to test (person, setting, equipment,
+                etc.) — add one below for each thing worth checking. A <strong>probe</strong> is just a one-off
+                check: try the skill under that new condition once, and log what happened.
+              </p>
+            </HelpDisclosure>
+          }
+        />
         {dims.length === 0 ? (
           <EmptyState title="No generalization dimensions defined" body="Add a dimension (person, setting, partner, etc.) below." />
         ) : (
@@ -382,7 +413,23 @@ function MaintenanceTab({ programId, maintenance, canManage }: any) {
   return (
     <div className="space-y-6">
       <Card>
-        <SectionHeader title="Maintenance Schedule" subtitle="Once a skill is mastered, check that it holds up over time." />
+        <SectionHeader
+          title="Maintenance Schedule"
+          subtitle="Once a skill is mastered, check that it holds up over time."
+          action={
+            <HelpDisclosure>
+              <p>
+                Maintenance checks are periodic re-checks — weeks or months after mastery — to make sure a skill
+                hasn&apos;t faded from disuse. Nothing needs to happen between checks; they&apos;re just a scheduled
+                reminder to look again.
+              </p>
+              <p className="text-ink-muted">
+                If a check comes back &quot;declined,&quot; that&apos;s a signal to add some practice back in — not
+                a failure, and not something that erases the original mastery.
+              </p>
+            </HelpDisclosure>
+          }
+        />
         {!maintenance ? (
           <EmptyState title="No maintenance plan yet" body="Set one up once this skill reaches mastery." />
         ) : (
@@ -445,6 +492,19 @@ function FidelityTab({ programId, fidelity, observations, canManage }: any) {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end -mb-2">
+        <HelpDisclosure label="What does &quot;fidelity&quot; mean?">
+          <p>
+            Fidelity is just how closely an implementation follows the plan, as written — whether that&apos;s you
+            running your own program, or a coach or caregiver running it for someone else.
+          </p>
+          <p className="text-ink-muted">
+            It&apos;s not a grade. It&apos;s a consistency check, mainly useful when progress stalls: this is what
+            tells you whether the plan itself needs to change, or whether it just isn&apos;t being followed
+            consistently yet.
+          </p>
+        </HelpDisclosure>
+      </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <Card>
           <div className="text-xs uppercase tracking-wide text-ink-muted mb-2">Average (last 5 observations)</div>
