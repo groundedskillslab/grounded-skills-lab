@@ -164,18 +164,30 @@ export const MEASUREMENT_TYPES = [
 // Development Goal for the first time may not. Kept short on purpose (one
 // line, no jargon-on-jargon) since these render inline under every checkbox,
 // not tucked behind a help toggle.
-export const TEACHING_PROCEDURES: { name: string; description: string }[] = [
-  { name: "Modeling", description: "Show them how it's done first, then have them try." },
-  { name: "Prompting", description: "Give a cue or hint to help them get it right, then reduce the cue over time." },
-  { name: "Shaping", description: "Reward closer and closer attempts until they reach the full skill." },
-  { name: "Chaining", description: "Teach the skill as a sequence of steps, linked together one at a time." },
-  { name: "Reinforcement", description: "Follow correct attempts with something that makes them more likely to happen again." },
+//
+// Worded to hold up whether the reader is teaching someone else OR teaching
+// themselves (a self-directed athlete is often both the coach and the
+// learner) — avoid "them"/"the person" phrasing that only makes sense from
+// an outside teacher's point of view.
+//
+// `common: true` marks the procedures shown by default in non-clinical
+// workspaces (performance / education / general) — the ones a self-directed
+// person is most likely to actually need, so the first thing they see isn't
+// a wall of 13 checkboxes. The rest sit behind a "Show more" disclosure.
+// Clinical workspaces (BCBAs) always see the full list uncurated, since that
+// audience already knows the terminology.
+export const TEACHING_PROCEDURES: { name: string; description: string; common?: boolean }[] = [
+  { name: "Modeling", description: "See it done correctly first — in person or on video — then try it yourself.", common: true },
+  { name: "Prompting", description: "Use a cue or hint to help get it right at first, then rely on it less over time.", common: true },
+  { name: "Shaping", description: "Reward closer and closer attempts until the full skill is reached." },
+  { name: "Chaining", description: "Break the skill into a sequence of steps and link them together one at a time." },
+  { name: "Reinforcement", description: "Follow a correct attempt with something rewarding, so it's more likely to happen again.", common: true },
   { name: "Differential Reinforcement", description: "Reward the specific version of the behavior you want more of, not just any attempt." },
-  { name: "Practice / Rehearsal", description: "Repeated, deliberate reps of the skill itself." },
+  { name: "Practice / Rehearsal", description: "Repeated, deliberate reps of the skill itself.", common: true },
   { name: "Precision Teaching", description: "Track speed and accuracy closely, and let the data guide what changes next." },
-  { name: "Error Correction", description: "Correct mistakes immediately and consistently, right when they happen." },
-  { name: "Stimulus Control Procedures", description: "Teach the skill to happen reliably in response to the right cue, and not others." },
-  { name: "Self-Monitoring", description: "The person tracks and reflects on their own performance as part of learning it." },
+  { name: "Error Correction", description: "Correct mistakes immediately and consistently, right when they happen.", common: true },
+  { name: "Stimulus Control Procedures", description: "Practice the skill so it reliably happens in response to the right cue, and not others." },
+  { name: "Self-Monitoring", description: "Track and reflect on your own performance as part of learning it." },
   { name: "Fading", description: "Gradually remove supports (cues, prompts, assistance) as independence increases." },
   { name: "Generalization Training", description: "Deliberately practice the skill across different settings, people, or conditions so it transfers." },
 ];

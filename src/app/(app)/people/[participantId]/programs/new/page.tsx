@@ -1,11 +1,23 @@
 import { requireUser } from "@/lib/session";
 import { getParticipant, getParticipantDomains, getParticipantGoals, listPromptHierarchies } from "@/lib/data";
-import { canManagePrograms } from "@/lib/rbac";
+import { canManagePrograms, isSelfLearner } from "@/lib/rbac";
 import { getLabels, MEASUREMENT_TYPES, TEACHING_PROCEDURES } from "@/lib/labels";
 import { Card, SectionHeader } from "@/components/ui";
 import { HelpDisclosure } from "@/components/HelpDisclosure";
 import { createProgram } from "@/actions/programs";
 import { notFound, redirect } from "next/navigation";
+
+function ProcedureCheckbox({ tp }: { tp: { name: string; description: string } }) {
+  return (
+    <label className="flex items-start gap-2 text-sm rounded-lg border border-gridline px-3 py-2 cursor-pointer has-[:checked]:bg-brand-soft has-[:checked]:border-brand/40">
+      <input type="checkbox" name="teachingProcedures" value={tp.name} className="accent-current mt-0.5" />
+      <span>
+        <span className="block font-medium">{tp.name}</span>
+        <span className="block text-xs text-ink-muted">{tp.description}</span>
+      </span>
+    </label>
+  );
+}
 
 export default async function NewProgramPage({ params }: { params: Promise<{ participantId: string }> }) {
   const { participantId } = await params;
@@ -15,10 +27,18 @@ export default async function NewProgramPage({ params }: { params: Promise<{ par
   const participant = await getParticipant(participantId);
   if (!participant) notFound();
   const labels = getLabels(participant.workspaceType);
-  const [domainsList, goalsList, hierarchies] = await Promise.all([
+  // Clinical workspaces (BCBAs) see the full teaching-procedure list — that
+  // audience already knows the terminology. Everyone else starts with the
+  // five most common procedures; the rest sit behind "Show more" so the
+  // form isn't a wall of jargon on first look.
+  const curateProcedures = participant.workspaceType !== "clinical";
+  const commonProcedures = TEACHING_PROCEDURES.filter((tp) => tp.common);
+  const moreProcedures = TEACHING_PROCEDURES.filter((tp) => !tp.common);
+  const [domainsList, goalsList, hierarchies, selfDirected] = await Promise.all([
     getParticipantDomains(participantId),
     getParticipantGoals(participantId),
     listPromptHierarchies(user.orgId),
+    isSelfLearner(user.id, participantId),
   ]);
 
   return (
@@ -118,30 +138,39 @@ export default async function NewProgramPage({ params }: { params: Promise<{ par
         <Card>
           <SectionHeader
             title="4. Teaching procedure"
-            subtitle="How you'll teach it — most people pick 2–3 of these, not all of them."
+            subtitle={
+              selfDirected
+                ? "How you'll work on it — most people pick 2–3 of these, not all of them."
+                : "How you'll teach it — most people pick 2–3 of these, not all of them."
+            }
             action={
               <HelpDisclosure>
                 <p>
-                  These are methods for teaching a skill, not the skill itself. Check whichever ones you actually plan
-                  to use — each one has a one-line description below it if the name isn&apos;t familiar.
+                  {selfDirected
+                    ? "These are methods for learning a skill, not the skill itself — several work fine solo (practice reps, self-monitoring, tracking your own data), and a few just need a stand-in for a coach, like a video to model off of. Check whichever ones you actually plan to use — each one has a one-line description below it if the name isn't familiar."
+                    : "These are methods for teaching a skill, not the skill itself. Check whichever ones you actually plan to use — each one has a one-line description below it if the name isn't familiar."}
+                  {curateProcedures && " We start with the most common ones below; the rest are one click away."}
                 </p>
               </HelpDisclosure>
             }
           />
           <div className="grid sm:grid-cols-2 gap-2 mb-4">
-            {TEACHING_PROCEDURES.map((tp) => (
-              <label
-                key={tp.name}
-                className="flex items-start gap-2 text-sm rounded-lg border border-gridline px-3 py-2 cursor-pointer has-[:checked]:bg-brand-soft has-[:checked]:border-brand/40"
-              >
-                <input type="checkbox" name="teachingProcedures" value={tp.name} className="accent-current mt-0.5" />
-                <span>
-                  <span className="block font-medium">{tp.name}</span>
-                  <span className="block text-xs text-ink-muted">{tp.description}</span>
-                </span>
-              </label>
+            {(curateProcedures ? commonProcedures : TEACHING_PROCEDURES).map((tp) => (
+              <ProcedureCheckbox key={tp.name} tp={tp} />
             ))}
           </div>
+          {curateProcedures && moreProcedures.length > 0 && (
+            <details className="mb-4">
+              <summary className="cursor-pointer text-sm text-ink-muted underline hover:text-ink list-none [&::-webkit-details-marker]:hidden">
+                Show {moreProcedures.length} more procedures
+              </summary>
+              <div className="grid sm:grid-cols-2 gap-2 mt-2">
+                {moreProcedures.map((tp) => (
+                  <ProcedureCheckbox key={tp.name} tp={tp} />
+                ))}
+              </div>
+            </details>
+          )}
           <label className="block text-sm font-medium mb-1">{labels.prompt} hierarchy</label>
           <select name="promptHierarchyId" className="w-full rounded-lg border border-gridline px-3 py-2 text-sm">
             <option value="">— none —</option>

@@ -117,6 +117,17 @@ export async function accessibleParticipantIds(userId: string): Promise<string[]
   return [...new Set(rows.map((r) => r.participantId))];
 }
 
+/**
+ * True if this user IS the learner on this participant's case — as opposed
+ * to a coach/practitioner managing someone else's. Used to adapt copy (e.g.
+ * "how you'll teach it" vs "how you'll practice it") for self-directed users
+ * building their own program, since the self-directed pattern always grants
+ * a "learner" roleOnCase row on the person's own participant record.
+ */
+export async function isSelfLearner(userId: string, participantId: string) {
+  return hasCaseCapability(userId, participantId, "learner");
+}
+
 export async function userCanAccessParticipant(userId: string, role: string, participantId: string) {
   if (isFullAccessRole(role)) return true;
   const [row] = await db
