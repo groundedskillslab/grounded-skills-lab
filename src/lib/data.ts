@@ -34,6 +34,15 @@ export async function listParticipants(orgId: string, userId: string, role: stri
   return rows.filter((r) => allowed.has(r.id));
 }
 
+// Archived participants are deliberately excluded from listParticipants
+// above (that's the whole point of archiving — get them out of the active
+// list) but still need to be reachable somewhere, or the "Unarchive" action
+// on their profile page becomes a dead end once used. Org-admin only,
+// since only org admins can archive/unarchive in the first place.
+export async function listArchivedParticipants(orgId: string) {
+  return db.select().from(participants).where(and(eq(participants.orgId, orgId), eq(participants.archived, true)));
+}
+
 export async function getParticipant(id: string) {
   const [row] = await db.select().from(participants).where(eq(participants.id, id)).limit(1);
   return row;

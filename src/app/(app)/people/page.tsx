@@ -1,15 +1,19 @@
 import { requireUser } from "@/lib/session";
-import { listParticipants, getParticipantPrograms } from "@/lib/data";
+import { listParticipants, listArchivedParticipants, getParticipantPrograms } from "@/lib/data";
 import { getLabels, WORKSPACE_TYPES } from "@/lib/labels";
 import { Card, Pill, LinkButton, SectionHeader, EmptyState } from "@/components/ui";
 import Link from "next/link";
-import { isFullAccessRole } from "@/lib/rbac";
+import { isFullAccessRole, isOrgAdmin } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function PeoplePage() {
   const user = await requireUser();
   const participants = await listParticipants(user.orgId, user.id, user.role);
+  // Archived participants are deliberately left off the main grid below —
+  // only org admins (the only ones who can archive/unarchive) get a way
+  // back to them, in a separate, visually secondary section.
+  const archivedParticipants = isOrgAdmin(user.role) ? await listArchivedParticipants(user.orgId) : [];
 
   const withPrograms = await Promise.all(
     participants.map(async (p) => ({ participant: p, programs: await getParticipantPrograms(p.id) }))
@@ -52,6 +56,24 @@ export default async function PeoplePage() {
             );
           })}
         </div>
+      )}
+
+      {archivedParticipants.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-ink-muted hover:text-ink">
+            Archived ({archivedParticipants.length})
+          </summary>
+          <ul className="mt-3 divide-y divide-gridline border border-gridline rounded-xl">
+            {archivedParticipants.map((p) => (
+              <li key={p.id} className="px-4 py-2.5">
+                <Link href={`/people/${p.id}`} className="hover:underline">
+                  {p.displayName}
+                </Link>
+                <span className="text-xs text-ink-muted ml-2">{p.participantCode}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );

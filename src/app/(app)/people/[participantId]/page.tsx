@@ -11,6 +11,8 @@ import { getLabels, WORKSPACE_TYPES, JOURNEY_STAGES } from "@/lib/labels";
 import { userCanAccessParticipant, canManagePrograms, canRunSessions, isOrgAdmin } from "@/lib/rbac";
 import { ROLE_LABELS } from "@/lib/roles";
 import { setSelfDirected } from "@/actions/team";
+import { deleteParticipant, archiveParticipant } from "@/actions/participants";
+import { DeleteParticipantButton } from "@/components/DeleteParticipantButton";
 import { Card, SectionHeader, Pill, JourneyBar, LinkButton, EmptyState } from "@/components/ui";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -75,6 +77,7 @@ export default async function ParticipantProfilePage({ params }: { params: Promi
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-medium">{participant.displayName}</h1>
             <Pill tone="brand">{wsMeta?.label}</Pill>
+            {participant.archived && <Pill tone="neutral">Archived</Pill>}
           </div>
           <div className="text-sm text-ink-muted mt-1">{participant.participantCode}</div>
         </div>
@@ -200,6 +203,30 @@ export default async function ParticipantProfilePage({ params }: { params: Promi
               })}
             </ul>
           </Card>
+          {isOrgAdmin(user.role) && (
+            <Card>
+              <SectionHeader title="Danger Zone" />
+              <p className="text-xs text-ink-muted mb-3">
+                Archive hides a participant from the active list without deleting anything — use it whenever there&apos;s real
+                history worth keeping. Delete permanently removes the participant and every program, session, and practice log
+                tied to them, with no undo — reserve it for test/demo profiles with nothing worth preserving.
+              </p>
+              <div className="flex items-center gap-4">
+                <form action={archiveParticipant}>
+                  <input type="hidden" name="participantId" value={participant.id} />
+                  <input type="hidden" name="archived" value={participant.archived ? "false" : "true"} />
+                  <button type="submit" className="text-xs text-ink-muted underline hover:text-ink">
+                    {participant.archived ? "Unarchive" : "Archive"}
+                  </button>
+                </form>
+                <DeleteParticipantButton
+                  participantId={participant.id}
+                  participantName={participant.displayName}
+                  action={deleteParticipant}
+                />
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>
