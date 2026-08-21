@@ -106,6 +106,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ progra
       </Card>
 
       <Tabs
+        numbered
         panels={[
           { id: "overview", label: "Overview", content: <OverviewTab program={program} labels={labels} teachingProcedures={teachingProcedures} promptHierarchy={promptHierarchy} /> },
           { id: "ta", label: "Task Analysis", content: <TaskAnalysisTab programId={programId} steps={steps} canManage={canManage} /> },
