@@ -158,20 +158,26 @@ export const MEASUREMENT_TYPES = [
   { value: "custom", label: "Custom Numeric Metric" },
 ] as const;
 
-export const TEACHING_PROCEDURES = [
-  "Modeling",
-  "Prompting",
-  "Shaping",
-  "Chaining",
-  "Reinforcement",
-  "Differential Reinforcement",
-  "Practice / Rehearsal",
-  "Precision Teaching",
-  "Error Correction",
-  "Stimulus Control Procedures",
-  "Self-Monitoring",
-  "Fading",
-  "Generalization Training",
+// Plain-language one-liners here specifically for self-directed users building
+// their own program without a practitioner in the room to ask — a coach/BCBA
+// already knows what "Chaining" means, but someone building their own
+// Development Goal for the first time may not. Kept short on purpose (one
+// line, no jargon-on-jargon) since these render inline under every checkbox,
+// not tucked behind a help toggle.
+export const TEACHING_PROCEDURES: { name: string; description: string }[] = [
+  { name: "Modeling", description: "Show them how it's done first, then have them try." },
+  { name: "Prompting", description: "Give a cue or hint to help them get it right, then reduce the cue over time." },
+  { name: "Shaping", description: "Reward closer and closer attempts until they reach the full skill." },
+  { name: "Chaining", description: "Teach the skill as a sequence of steps, linked together one at a time." },
+  { name: "Reinforcement", description: "Follow correct attempts with something that makes them more likely to happen again." },
+  { name: "Differential Reinforcement", description: "Reward the specific version of the behavior you want more of, not just any attempt." },
+  { name: "Practice / Rehearsal", description: "Repeated, deliberate reps of the skill itself." },
+  { name: "Precision Teaching", description: "Track speed and accuracy closely, and let the data guide what changes next." },
+  { name: "Error Correction", description: "Correct mistakes immediately and consistently, right when they happen." },
+  { name: "Stimulus Control Procedures", description: "Teach the skill to happen reliably in response to the right cue, and not others." },
+  { name: "Self-Monitoring", description: "The person tracks and reflects on their own performance as part of learning it." },
+  { name: "Fading", description: "Gradually remove supports (cues, prompts, assistance) as independence increases." },
+  { name: "Generalization Training", description: "Deliberately practice the skill across different settings, people, or conditions so it transfers." },
 ];
 
 export const GENERALIZATION_DIMENSIONS = [
