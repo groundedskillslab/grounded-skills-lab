@@ -9,7 +9,7 @@ import { programChanges } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getLabels, JOURNEY_STAGES, MEASUREMENT_TYPES, GENERALIZATION_DIMENSIONS } from "@/lib/labels";
 import { MASTERY_CRITERIA_PRESETS } from "@/lib/mastery";
-import { userCanAccessParticipant, canManagePrograms } from "@/lib/rbac";
+import { userCanAccessParticipant, canManagePrograms, isSelfLearner } from "@/lib/rbac";
 import { Card, SectionHeader, Pill, JourneyBar, LinkButton, EmptyState } from "@/components/ui";
 import { HelpDisclosure } from "@/components/HelpDisclosure";
 import { Tabs } from "@/components/Tabs";
@@ -37,6 +37,13 @@ export default async function ProgramPage({ params }: { params: Promise<{ progra
 
   const canManage = await canManagePrograms(user, participant.id);
   const labels = getLabels(participant.workspaceType);
+  // Presentation-only override for a self-directed viewer on their own case:
+  // "Coaching Fidelity" (etc.) reads like someone else implementing a plan
+  // on your behalf, which doesn't fit self-scoring your own plan. Doesn't
+  // touch labels.fidelity itself, so practitioner/admin views of this same
+  // program keep the workspace's normal term.
+  const viewingSelf = await isSelfLearner(user.id, participant.id);
+  const fidelityLabel = viewingSelf ? "Plan Fidelity" : labels.fidelity;
   const goal = await getGoal(program.goalId);
   const domain = goal ? await getDomain(goal.domainId) : null;
 
@@ -113,7 +120,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ progra
           { id: "measurement", label: "Measurement & Mastery", content: <MeasurementTab programId={programId} targets={progTargets} labels={labels} canManage={canManage} masteryChecks={masteryChecks} /> },
           { id: "generalization", label: labels.generalization, content: <GeneralizationTab programId={programId} dims={dims} probes={probes} targets={progTargets} canManage={canManage} /> },
           { id: "maintenance", label: labels.maintenance, content: <MaintenanceTab programId={programId} maintenance={maintenance} canManage={canManage} /> },
-          { id: "fidelity", label: labels.fidelity, content: <FidelityTab programId={programId} fidelity={fidelity} observations={fidelityObs} canManage={canManage} /> },
+          { id: "fidelity", label: fidelityLabel, content: <FidelityTab programId={programId} fidelity={fidelity} observations={fidelityObs} canManage={canManage} /> },
           { id: "translation", label: `${labels.caregiver} / ${labels.implementer} View`, content: <TranslationTab program={program} labels={labels} /> },
           { id: "log", label: "Decision Log", content: <DecisionLogTab programId={programId} changes={changes} canManage={canManage} /> },
         ]}

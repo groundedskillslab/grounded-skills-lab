@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { getProgram, getFidelityProtocol, getParticipant, getParticipantTeam } from "@/lib/data";
-import { canScoreFidelity } from "@/lib/rbac";
+import { canScoreFidelity, isSelfLearner } from "@/lib/rbac";
 import { getLabels } from "@/lib/labels";
 import { Card, SectionHeader } from "@/components/ui";
 import { recordFidelityObservation } from "@/actions/programs";
@@ -19,10 +19,14 @@ export default async function NewFidelityObservationPage({ params }: { params: P
   const team = await getParticipantTeam(program.participantId);
   const implementers = team.filter((t) => t.assignment.roleOnCase === "implementer");
   const labels = getLabels(participant?.workspaceType);
+  // Same presentation-only self-directed override as the Program detail and
+  // Analytics pages — doesn't touch labels.fidelity itself.
+  const viewingSelf = participant ? await isSelfLearner(user.id, participant.id) : false;
+  const fidelityLabel = viewingSelf ? "Plan Fidelity" : labels.fidelity;
 
   return (
     <div className="max-w-xl mx-auto">
-      <SectionHeader title={`Record ${labels.fidelity} Observation`} subtitle={fidelity.protocol.name} />
+      <SectionHeader title={`Record ${fidelityLabel} Observation`} subtitle={fidelity.protocol.name} />
       <Card>
         <form action={recordFidelityObservation} className="space-y-5">
           <input type="hidden" name="protocolId" value={fidelity.protocol.id} />

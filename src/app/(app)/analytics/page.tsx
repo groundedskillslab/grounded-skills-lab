@@ -52,8 +52,15 @@ export default async function AnalyticsPage() {
   // participant shares one workspace type (always true for a self-directed
   // viewer, since they only ever see themselves); otherwise fall back to
   // the neutral "Fidelity" for a mixed-workspace org view.
+  // For a self-directed viewer specifically, override to "Plan Fidelity" —
+  // "Coaching Fidelity"/"Treatment Fidelity" etc. describe someone else
+  // implementing a plan on your behalf, which doesn't fit someone following
+  // their own plan for themselves. Presentation-only: the underlying
+  // workspace LabelSet, data, and practitioner-facing wording are untouched.
   const workspaceTypes = new Set(participants.map((p) => p.workspaceType));
-  const fidelityLabel = workspaceTypes.size === 1 ? getLabels([...workspaceTypes][0]).fidelity : "Fidelity";
+  const fidelityLabel = selfDirected
+    ? "Plan Fidelity"
+    : workspaceTypes.size === 1 ? getLabels([...workspaceTypes][0]).fidelity : "Fidelity";
 
   return (
     <div className="space-y-8">

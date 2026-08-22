@@ -4,7 +4,7 @@ import {
   getFidelityObservations, getGeneralizationDimensions, getGeneralizationProbes, getMaintenancePlan,
   getPracticeLogsForProgram, getUser,
 } from "@/lib/data";
-import { userCanAccessParticipant } from "@/lib/rbac";
+import { userCanAccessParticipant, isSelfLearner } from "@/lib/rbac";
 import { getLabels, JOURNEY_STAGES } from "@/lib/labels";
 import { aggregateTrialsBySession, promptLevelDistribution, rowPerformanceFraction, TrialRow } from "@/lib/analytics";
 import {
@@ -29,6 +29,12 @@ export default async function ProgramAnalyticsPage({ params }: { params: Promise
   if (!allowed) redirect("/analytics");
 
   const labels = getLabels(participant.workspaceType);
+  // Same presentation-only self-directed override as the Program detail
+  // page and the Analytics overview tile — doesn't touch labels.fidelity,
+  // so a practitioner/admin viewing this same program's chart still sees
+  // the workspace's normal term.
+  const viewingSelf = await isSelfLearner(user.id, participant.id);
+  const fidelityLabel = viewingSelf ? "Plan Fidelity" : labels.fidelity;
 
   const [targets, trials, sessions, fidelityObs, dims, probes, maintenance, practiceLogs] = await Promise.all([
     getProgramTargets(programId),
@@ -156,8 +162,8 @@ export default async function ProgramAnalyticsPage({ params }: { params: Promise
 
       {fidelityTrendData.length > 0 && (
         <Card>
-          <SectionHeader title={`${labels.fidelity} Over Time`} />
-          <TrendChart data={fidelityTrendData} series={[{ key: "fidelity", label: labels.fidelity, colorIndex: 6 }]} />
+          <SectionHeader title={`${fidelityLabel} Over Time`} />
+          <TrendChart data={fidelityTrendData} series={[{ key: "fidelity", label: fidelityLabel, colorIndex: 6 }]} />
         </Card>
       )}
 
