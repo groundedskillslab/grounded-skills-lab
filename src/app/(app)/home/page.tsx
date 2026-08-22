@@ -247,7 +247,7 @@ async function SimpleHome({ userId, orgId, name, role }: { userId: string; orgId
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <div className="text-sm text-brand-ink font-medium">
-              {selfDirectedParticipant ? `Training yourself: ${selfDirectedParticipant.displayName}` : "New here?"}
+              {selfDirectedParticipant ? "Your Training" : "New here?"}
             </div>
             <div className="text-xs text-ink-muted mt-0.5">The Getting Started guide walks through what's yours to do.</div>
           </div>
@@ -256,9 +256,13 @@ async function SimpleHome({ userId, orgId, name, role }: { userId: string; orgId
       </Card>
 
       <Card>
-        <SectionHeader title="Assigned Practice" />
+        <SectionHeader title={selfDirectedParticipant ? "Your Practice" : "Assigned Practice"} />
         {assignments.length === 0 ? (
-          <EmptyState title="Nothing assigned yet" body="Your practitioner hasn't assigned any practice yet." />
+          selfDirectedParticipant ? (
+            <EmptyState title="Nothing logged yet" body="Head to Practice Mode below when you're ready to log a rep." />
+          ) : (
+            <EmptyState title="Nothing assigned yet" body="Your practitioner hasn't assigned any practice yet." />
+          )
         ) : (
           <ul className="divide-y divide-gridline">
             {assignments.map((a) => (

@@ -114,7 +114,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ progra
           { id: "generalization", label: labels.generalization, content: <GeneralizationTab programId={programId} dims={dims} probes={probes} targets={progTargets} canManage={canManage} /> },
           { id: "maintenance", label: labels.maintenance, content: <MaintenanceTab programId={programId} maintenance={maintenance} canManage={canManage} /> },
           { id: "fidelity", label: labels.fidelity, content: <FidelityTab programId={programId} fidelity={fidelity} observations={fidelityObs} canManage={canManage} /> },
-          { id: "translation", label: "Caregiver / Coach View", content: <TranslationTab program={program} labels={labels} /> },
+          { id: "translation", label: `${labels.caregiver} / ${labels.implementer} View`, content: <TranslationTab program={program} labels={labels} /> },
           { id: "log", label: "Decision Log", content: <DecisionLogTab programId={programId} changes={changes} canManage={canManage} /> },
         ]}
       />
@@ -585,7 +585,7 @@ function DecisionLogTab({ programId, changes, canManage }: any) {
   return (
     <div className="space-y-6">
       <Card>
-        <SectionHeader title="Professional Decision Log" subtitle="A transparent record of what changed, why, and what to review next — not an automatic treatment recommendation." />
+        <SectionHeader title="Decision Log" subtitle="A transparent record of what changed, why, and what to review next — not an automatic recommendation." />
         {changes.length === 0 ? (
           <EmptyState title="No changes logged yet" />
         ) : (

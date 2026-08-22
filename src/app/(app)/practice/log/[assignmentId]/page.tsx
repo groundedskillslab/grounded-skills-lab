@@ -28,7 +28,17 @@ export default async function PracticeLogPage({ params }: { params: Promise<{ as
   const targets = assignment.programId ? await getProgramTargets(assignment.programId) : [];
   const labels = getLabels(participant.workspaceType);
 
-  const howTo = program?.caregiverSummary || program?.coachSummary || assignment.instructions || "Follow the instructions your practitioner shared.";
+  // The generic fallback only fires when there's no program-level summary
+  // AND no instructions written on the assignment itself — rare, but when
+  // it does happen the wording shouldn't assume a practitioner exists.
+  // assignedByUserId === assignedToUserId is the same self-assigned signal
+  // used elsewhere (e.g. the Home/Practice self-directed copy).
+  const selfAssigned = assignment.assignedByUserId === assignment.assignedToUserId;
+  const howTo =
+    program?.caregiverSummary ||
+    program?.coachSummary ||
+    assignment.instructions ||
+    (selfAssigned ? "Follow your own plan for this skill." : "Follow the instructions your practitioner shared.");
   const success = program?.operationalDefinition || "Complete the practice as described.";
 
   return (

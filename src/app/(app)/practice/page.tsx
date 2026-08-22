@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/session";
-import { listParticipants, getAssignmentsForUser, getAssignmentsForParticipant, getParticipantPrograms, listUsers, getParticipant } from "@/lib/data";
+import { listParticipants, getAssignmentsForUser, getAssignmentsForParticipant, getParticipantPrograms, listUsers, getParticipant, getSelfDirectedParticipant } from "@/lib/data";
 import { getLabels } from "@/lib/labels";
 import { isFullAccessRole } from "@/lib/rbac";
 import { Card, SectionHeader, Pill, LinkButton, EmptyState } from "@/components/ui";
@@ -15,11 +15,14 @@ export default async function PracticePage() {
 
   if (!isFullAccessRole(user.role) && user.role !== "implementer") {
     const assignments = await getAssignmentsForUser(user.id);
+    // Same self-directed signal used on Home — a self-run practice plan
+    // reads oddly as "assigned to you" when you're the one who set it up.
+    const selfDirected = user.role === "learner" ? await getSelfDirectedParticipant(user.id) : undefined;
     return (
       <div className="max-w-xl mx-auto space-y-6">
-        <SectionHeader title="Practice" subtitle="What's assigned to you right now." />
+        <SectionHeader title="Practice" subtitle={selfDirected ? "Your practice plan." : "What's assigned to you right now."} />
         {assignments.length === 0 ? (
-          <Card><EmptyState title="Nothing assigned yet" /></Card>
+          <Card><EmptyState title={selfDirected ? "Nothing yet" : "Nothing assigned yet"} /></Card>
         ) : (
           <div className="space-y-3">
             {assignments.map((a) => (

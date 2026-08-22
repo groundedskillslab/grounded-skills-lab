@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/session";
-import { listParticipants, listArchivedParticipants, getParticipantPrograms } from "@/lib/data";
+import { listParticipants, listArchivedParticipants, getParticipantPrograms, getSelfDirectedParticipant } from "@/lib/data";
 import { getLabels, WORKSPACE_TYPES } from "@/lib/labels";
 import { Card, Pill, LinkButton, SectionHeader, EmptyState } from "@/components/ui";
 import Link from "next/link";
@@ -19,11 +19,18 @@ export default async function PeoplePage() {
     participants.map(async (p) => ({ participant: p, programs: await getParticipantPrograms(p.id) }))
   );
 
+  // Same self-directed signal used on Home/Practice/Nav — a "People" grid
+  // containing a single card that is yourself reads as administrative
+  // rather than personal, so it's relabeled to match "My Profile" in the
+  // nav. Reverts automatically if this account ever gains access to
+  // anyone else's case.
+  const selfDirected = user.role === "learner" ? await getSelfDirectedParticipant(user.id) : undefined;
+
   return (
     <div className="space-y-6">
       <SectionHeader
-        title="People"
-        subtitle="Everyone you support — clients, students, athletes, and participants — in one list."
+        title={selfDirected ? "My Profile" : "People"}
+        subtitle={selfDirected ? "Your training profile and active goals." : "Everyone you support — clients, students, athletes, and participants — in one list."}
         action={isFullAccessRole(user.role) ? <LinkButton href="/people/new">Add Participant</LinkButton> : undefined}
       />
 

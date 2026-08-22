@@ -8,7 +8,7 @@ import {
   getParticipantSessions,
 } from "@/lib/data";
 import { getLabels, WORKSPACE_TYPES, JOURNEY_STAGES } from "@/lib/labels";
-import { userCanAccessParticipant, canManagePrograms, canRunSessions, isOrgAdmin } from "@/lib/rbac";
+import { userCanAccessParticipant, canManagePrograms, canRunSessions, isOrgAdmin, isSelfLearner } from "@/lib/rbac";
 import { ROLE_LABELS } from "@/lib/roles";
 import { setSelfDirected } from "@/actions/team";
 import { deleteParticipant, archiveParticipant } from "@/actions/participants";
@@ -29,9 +29,10 @@ export default async function ParticipantProfilePage({ params }: { params: Promi
   const allowed = await userCanAccessParticipant(user.id, user.role, participantId);
   if (!allowed) redirect("/people");
 
-  const [canManage, canRun] = await Promise.all([
+  const [canManage, canRun, viewingSelf] = await Promise.all([
     canManagePrograms(user, participantId),
     canRunSessions(user, participantId),
+    isSelfLearner(user.id, participantId),
   ]);
 
   const labels = getLabels(participant.workspaceType);
@@ -92,7 +93,7 @@ export default async function ParticipantProfilePage({ params }: { params: Promi
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <SectionHeader title="How is this person developing?" subtitle={`${labels.program}s grouped by goal and domain.`} />
+            <SectionHeader title={viewingSelf ? "How are you progressing?" : "How is this person developing?"} subtitle={`${labels.program}s grouped by goal and domain.`} />
             {domainsList.length === 0 ? (
               <EmptyState title="No domains yet" body={`Add a domain and goal to begin building a ${labels.program.toLowerCase()}.`} />
             ) : (

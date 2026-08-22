@@ -117,7 +117,7 @@ export default async function ProgramAnalyticsPage({ params }: { params: Promise
       </div>
 
       <Card>
-        <SectionHeader title="Observed Data Patterns" subtitle="Descriptive observations, not treatment recommendations." />
+        <SectionHeader title="Observed Data Patterns" subtitle="Descriptive observations, not automatic recommendations." />
         {insights.length === 0 ? (
           <EmptyState title="Not enough data yet for a pattern" body="Insights appear once several sessions have been recorded." />
         ) : (

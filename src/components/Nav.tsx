@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_LABELS } from "@/lib/roles";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: "/home", label: "Home" },
   { href: "/people", label: "People" },
   { href: "/sessions", label: "Sessions" },
@@ -15,9 +15,25 @@ const NAV_ITEMS = [
   { href: "/guide", label: "Guide" },
 ];
 
-export function Nav({ user }: { user: { name?: string | null; email?: string | null; role: string; title?: string } }) {
+export function Nav({
+  user,
+  soloSelfDirected,
+}: {
+  user: { name?: string | null; email?: string | null; role: string; title?: string };
+  /** True for a self-directed learner whose only accessible participant is
+   * themselves — a "People" list containing only your own name reads as
+   * administrative rather than personal, so it's relabeled to match the
+   * "your profile" language already used elsewhere for this account type.
+   * Flips back to "People" automatically if this account ever gains access
+   * to anyone else's case, since the underlying nav item and route never
+   * change — only the label. */
+  soloSelfDirected?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
+  const NAV_ITEMS = soloSelfDirected
+    ? BASE_NAV_ITEMS.map((item) => (item.href === "/people" ? { ...item, label: "My Profile" } : item))
+    : BASE_NAV_ITEMS;
 
   async function handleSignOut() {
     const supabase = createClient();

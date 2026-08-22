@@ -123,8 +123,7 @@ async function SelfDirectedGuide({ userId }: { userId: string }) {
                 nav) is structured, {labels.trial.toLowerCase()}-by-{labels.trial.toLowerCase()} data collection —
                 use it when you're actively working the program and want real numbers behind your progress.{" "}
                 <span className="font-medium">Practice Mode</span> is a lighter log for the reps you do between formal
-                sessions — good for volume, not scored the same way. As a self-directed user you can assign yourself
-                practice from the Practice page if you want a reminder trail.
+                sessions — good for volume, not scored the same way.
               </p>
               <div className="flex gap-2 flex-wrap">
                 {participant && (
@@ -151,7 +150,7 @@ async function SelfDirectedGuide({ userId }: { userId: string }) {
                 <span className="font-medium">Analytics</span> for a board sorted into Progressing / Stable / Needs
                 Review, or open a specific {labels.program.toLowerCase()} for its full trend, prompt-level
                 breakdown, and success-by-context charts, plus a plain-language "Observed Data Pattern" — a
-                description of what the data shows, never a treatment recommendation.
+                description of what the data shows, never an automatic recommendation.
               </p>
               <div className="flex gap-2 flex-wrap">
                 <LinkButton href="/analytics" variant="secondary">Analytics Board</LinkButton>
@@ -172,7 +171,7 @@ async function SelfDirectedGuide({ userId }: { userId: string }) {
               <SectionHeader title="Adjust" subtitle="When the data says it's time to change something, write down why." />
               <p className="text-sm text-ink-secondary mb-3">
                 Open your {labels.program.toLowerCase()} and use the{" "}
-                <span className="font-medium">Professional Decision Log</span> to record what you changed and why —
+                <span className="font-medium">Decision Log</span> to record what you changed and why —
                 a prompt level, a mastery target, the teaching procedure itself. It's a transparent record for
                 future-you, not an automated suggestion.
               </p>
