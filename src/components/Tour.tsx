@@ -164,7 +164,7 @@ function buildSelfDirectedSteps(opts: {
 
   steps.push({
     title: "Practice Mode — the lighter log",
-    body: "For reps between formal sessions. Less structured, good for keeping a volume trail — you can even assign practice to yourself as a reminder.",
+    body: "For reps between formal sessions. Less structured, good for keeping a volume trail.",
     href: "/practice",
     hrefLabel: "Open Practice Mode",
   });
