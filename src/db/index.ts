@@ -28,7 +28,15 @@ if (!connectionString) {
   );
 }
 
-const client = global.__pgClient ?? postgres(connectionString, { prepare: false });
+// max: 1 — each Vercel serverless instance holds at most one physical
+// connection to the Session Pooler. Without this, postgres.js defaults to
+// up to 10 connections per client instance; against the pooler's hard cap
+// of 15 total, as few as 2-3 concurrent requests (e.g. one /people page
+// load, which fires a parallel query per participant card) exhaust the
+// pool and every other request fails with EMAXCONNSESSION until something
+// frees up. idle_timeout releases a connection back to the pool quickly
+// once a request finishes, instead of holding it open indefinitely.
+const client = global.__pgClient ?? postgres(connectionString, { prepare: false, max: 1, idle_timeout: 20 });
 if (process.env.NODE_ENV !== "production") global.__pgClient = client;
 
 export const db = drizzle(client, { schema });
