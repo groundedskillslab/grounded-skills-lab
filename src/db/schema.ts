@@ -407,3 +407,22 @@ export const auditLogs = pgTable("audit_logs", {
   metadata: text("metadata"), // JSON
   timestamp: timestamp("timestamp", { mode: "date" }).$defaultFn(() => new Date()),
 });
+
+/* ------------------------------------------------------------------ */
+/* Beta signups (public marketing site, added 2026-08-23)              */
+/* ------------------------------------------------------------------ */
+
+// Submissions from the public "Request Beta Access" form at /beta — no
+// org/user rows involved, this is pre-account interest capture from
+// unauthenticated visitors. describesYou: independent | coach |
+// practitioner | educator | other. interestedIn: app | journal | both.
+export const betaSignups = pgTable("beta_signups", {
+  id: id(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  skillFocus: text("skill_focus"),
+  describesYou: text("describes_you").notNull(),
+  interestedIn: text("interested_in").notNull(),
+  note: text("note"),
+  createdAt: now(),
+});

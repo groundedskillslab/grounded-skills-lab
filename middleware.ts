@@ -38,6 +38,8 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublic =
+    pathname === "/" || // marketing homepage — exact match only, NOT startsWith("/")
+    pathname.startsWith("/beta") || // public beta-interest form
     PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico";
