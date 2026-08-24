@@ -34,9 +34,22 @@ export function MarketingFooter() {
         ))}
       </div>
 
-      <div className="max-w-[1400px] mx-auto flex justify-between pt-6 font-heading text-xs text-white/45">
+      <div className="max-w-[1400px] mx-auto flex justify-between items-center pt-6 font-heading text-xs text-white/45">
         <div>© {new Date().getFullYear()} Grounded Skills Lab</div>
-        <div className="flex gap-6">
+        <div className="flex items-center gap-6">
+          <a
+            href="https://www.instagram.com/groundedskillslab/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Grounded Skills Lab on Instagram"
+            className="hover:text-white transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" />
+            </svg>
+          </a>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
         </div>
