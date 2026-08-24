@@ -1,22 +1,27 @@
 // Shared "GROUNDED / SKILLS LAB" lockup — used by the nav, footer, and the
 // beta page header, so all three stay in sync.
 //
-// Two fixes over the first pass: (1) tracking on "SKILLS LAB" was 0.34em on
-// text rendered at 57% size — at that scale it read as scattered dots, not a
-// word. Brought both lines' tracking down to something an eye can actually
-// parse. (2) letter-spacing adds trailing space after the last glyph, and
-// text-align:center includes that trailing space when it centers a line —
-// so two lines with different tracking amounts (and thus different trailing
-// space) don't stack centered over each other, they visibly drift apart.
-// Each line cancels its own trailing space with a matching negative
-// margin-right so both lines share one true optical center.
+// The two lines are tuned to justify into one tight rectangle: "SKILLS LAB"
+// is set at 78% of GROUNDED's size with 0.345em tracking, a ratio measured
+// (not eyeballed) against the real Sofia Pro metrics so its tracked width
+// lands on GROUNDED's width exactly — both lines start and end at the same
+// edges. That match holds at any size these are rendered at, since both the
+// percentage size and the em-based tracking scale proportionally together.
+//
+// Letter-spacing also adds trailing space after the very last glyph, and
+// text-align:center factors that trailing space into where it centers a
+// line — so two lines with different tracking would drift to different
+// visual centers even while each is individually "centered." Each line
+// cancels its own trailing space with a matching negative margin-right so
+// both share one true optical center (this also matters for the rectangle:
+// without it, the trailing gap would break the right-edge alignment).
 
 export function Wordmark({ size = "text-[15px]" }: { size?: string }) {
   return (
-    <div className={`font-heading font-semibold ${size} text-center leading-[1.05]`}>
+    <div className={`font-heading font-semibold ${size} text-center leading-[1]`}>
       <span className="inline-block tracking-[0.1em] mr-[-0.1em]">GROUNDED</span>
       <br />
-      <span className="inline-block mt-[3px] text-[64%] font-normal tracking-[0.13em] mr-[-0.13em] text-brand">
+      <span className="inline-block mt-[1px] text-[78%] font-normal tracking-[0.345em] mr-[-0.345em] text-brand">
         SKILLS LAB
       </span>
     </div>
