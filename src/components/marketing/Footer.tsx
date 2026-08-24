@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "./Wordmark";
 
 const FOOTER_COLUMNS = [
   { heading: "Product", links: [{ label: "How it works", href: "#how-it-works" }, { label: "Self-Directed", href: "#self-directed" }, { label: "Coaches & Practitioners", href: "#supported-practice" }] },
@@ -14,11 +15,7 @@ export function MarketingFooter() {
           <Link href="/" className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-mark.svg" alt="" className="w-6 h-auto" aria-hidden />
-            <div className="font-heading font-semibold text-[13px] leading-[1.1] tracking-[0.18em] text-center">
-              GROUNDED
-              <br />
-              <span className="text-[57%] font-normal tracking-[0.34em] text-brand">SKILLS LAB</span>
-            </div>
+            <Wordmark size="text-[13px]" />
           </Link>
           <p className="font-body italic text-brand-soft text-[15px] mt-4">Practice. Measure. Improve. Repeat.</p>
         </div>

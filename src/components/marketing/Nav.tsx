@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Wordmark, WordmarkInline } from "./Wordmark";
 
 const NAV_LINKS = [
   { href: "#how-it-works", label: "How it works" },
@@ -9,20 +10,6 @@ const NAV_LINKS = [
   { href: "#self-directed", label: "Self-Directed" },
   { href: "#journal", label: "Journal" },
 ];
-
-// Wordmark lockup matching the approved design canvas exactly: GROUNDED in
-// Sofia Pro Semibold, SKILLS LAB in Sofia Pro Regular + Accent Gold,
-// optically centered as one unit (not left-aligned) — see the brand-identity
-// doc's "Mark variation system" section for the full spec.
-function Wordmark({ size = "text-[15px]" }: { size?: string }) {
-  return (
-    <div className={`font-heading font-semibold ${size} leading-[1.1] tracking-[0.18em] text-center`}>
-      GROUNDED
-      <br />
-      <span className="text-[57%] font-normal tracking-[0.34em] text-brand">SKILLS LAB</span>
-    </div>
-  );
-}
 
 export function MarketingNav() {
   const [open, setOpen] = useState(false);
@@ -37,9 +24,7 @@ export function MarketingNav() {
             <span className="hidden sm:block">
               <Wordmark />
             </span>
-            <span className="sm:hidden font-heading font-semibold text-[12.5px] tracking-[0.04em]">
-              GROUNDED <span className="font-normal text-brand">SKILLS LAB</span>
-            </span>
+            <WordmarkInline className="sm:hidden text-[12.5px]" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-9">

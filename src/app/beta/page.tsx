@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BetaFormClient } from "@/components/marketing/BetaFormClient";
 import { MarketingFooter } from "@/components/marketing/Footer";
+import { WordmarkInline } from "@/components/marketing/Wordmark";
 
 export default function BetaPage() {
   return (
@@ -9,9 +10,7 @@ export default function BetaPage() {
         <Link href="/" className="inline-flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-mark.svg" alt="" className="w-6 h-auto" aria-hidden />
-          <span className="font-heading font-semibold text-[12.5px] tracking-[0.04em]">
-            GROUNDED <span className="font-normal text-brand">SKILLS LAB</span>
-          </span>
+          <WordmarkInline className="text-[12.5px]" />
         </Link>
       </div>
       <BetaFormClient />
