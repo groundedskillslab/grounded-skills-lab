@@ -37,8 +37,8 @@ export function MarketingFooter() {
       <div className="max-w-[1400px] mx-auto flex justify-between pt-6 font-heading text-xs text-white/45">
         <div>© {new Date().getFullYear()} Grounded Skills Lab</div>
         <div className="flex gap-6">
-          <Link href="#">Privacy</Link>
-          <Link href="#">Terms</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
         </div>
       </div>
     </footer>
