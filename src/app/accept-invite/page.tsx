@@ -151,6 +151,18 @@ function AcceptInviteForm() {
           >
             {loading ? "Setting password..." : "Set password & continue"}
           </button>
+
+          <p className="text-xs text-ink-muted text-center">
+            By continuing, you agree to our{" "}
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">
+              Privacy Policy
+            </a>
+            .
+          </p>
         </form>
       </div>
     </div>

@@ -47,6 +47,18 @@ export function SignupForm({
       >
         {pending ? "Creating account..." : "Create my account"}
       </button>
+
+      <p className="text-xs text-ink-muted text-center">
+        By creating an account, you agree to our{" "}
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">
+          Terms of Service
+        </a>{" "}
+        and{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">
+          Privacy Policy
+        </a>
+        .
+      </p>
     </form>
   );
 }
