@@ -117,7 +117,7 @@ export default function PrivacyPage() {
           <h2>11. Contact us</h2>
           <p>
             Questions about this policy, or requests related to your information, can be sent to{" "}
-            <a href="mailto:privacy@groundedskillslab.com">privacy@groundedskillslab.com</a>.
+            <a href="mailto:hello@groundedskillslab.com">hello@groundedskillslab.com</a>.
           </p>
 
           <h2>12. Changes to this policy</h2>
