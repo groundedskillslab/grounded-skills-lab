@@ -28,6 +28,35 @@ function siteAccessOk(req: Request): boolean {
   return password === sitePassword;
 }
 
+// Internal admin tools (currently just /admin/beta-signups) show data that
+// isn't scoped to any organization, so none of the product's own roles
+// (org_admin | practitioner | implementer | caregiver | learner — see
+// rbac.ts) is the right gate, and there's no "platform superadmin" concept
+// to bolt on. Rather than stretch the org-scoped user model to cover this,
+// /admin gets its own HTTP Basic Auth gate — same mechanism as
+// siteAccessOk above, but its own password, and the OPPOSITE fail-safe
+// direction: unset ADMIN_PASSWORD means the route is BLOCKED, not open,
+// since this serves real user PII (beta signup names/emails), not a demo
+// toggle. Checked first and returns early — admin routes intentionally
+// don't touch Supabase auth/session at all.
+function adminAccessOk(req: Request): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) return false; // fail closed — no password configured means no access
+
+  const header = req.headers.get("authorization");
+  if (!header?.startsWith("Basic ")) return false;
+
+  let decoded: string;
+  try {
+    decoded = atob(header.slice(6));
+  } catch {
+    return false;
+  }
+  const separatorIndex = decoded.indexOf(":");
+  const password = separatorIndex === -1 ? "" : decoded.slice(separatorIndex + 1);
+  return password === adminPassword;
+}
+
 export async function middleware(request: NextRequest) {
   if (!siteAccessOk(request)) {
     return new NextResponse("Authentication required", {
@@ -37,6 +66,17 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/admin")) {
+    if (!adminAccessOk(request)) {
+      return new NextResponse("Authentication required", {
+        status: 401,
+        headers: { "WWW-Authenticate": 'Basic realm="Grounded Skills Lab Admin"' },
+      });
+    }
+    return NextResponse.next();
+  }
+
   const isPublic =
     pathname === "/" || // marketing homepage — exact match only, NOT startsWith("/")
     pathname.startsWith("/beta") || // public beta-interest form
