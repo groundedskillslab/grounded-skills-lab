@@ -1,7 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { db } from "@/db";
 import { betaSignups } from "@/db/schema";
+import { notifyBetaSignup } from "@/lib/email";
 
 export type BetaFormState = { error: string | null; success: boolean };
 
@@ -34,6 +36,13 @@ export async function submitBetaSignup(_prevState: BetaFormState, formData: Form
     interestedIn,
     note: note || null,
   });
+
+  // Scheduled with after() so the notification email can't add latency to
+  // the response — the person submitting the form sees success as soon as
+  // the row is written, and this fires once that response is already on
+  // its way. Never throws (see notifyBetaSignup's doc comment), so there's
+  // nothing to catch here.
+  after(() => notifyBetaSignup({ name, email, skillFocus: skillFocus || null, describesYou, interestedIn, note: note || null }));
 
   return { error: null, success: true };
 }
