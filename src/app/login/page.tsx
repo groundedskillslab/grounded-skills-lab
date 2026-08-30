@@ -4,22 +4,6 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { DEMO_PASSWORD } from "@/lib/demoAuth";
-
-const DEMO_USERS = [
-  { role: "Org Admin", name: "Dana Reyes", email: "dana@groundedskillslab.demo" },
-  { role: "Practitioner · BCBA", name: "Priya Shah", email: "priya@groundedskillslab.demo" },
-  { role: "Practitioner · Performance", name: "Marcus Webb", email: "marcus@groundedskillslab.demo" },
-  { role: "Implementer · Behavior Tech", name: "Jordan Lee", email: "jordan@groundedskillslab.demo" },
-  { role: "Implementer · Teacher", name: "Casey Nguyen", email: "casey@groundedskillslab.demo" },
-  { role: "Implementer · BJJ Coach", name: "Coach Ade Okafor", email: "ade@groundedskillslab.demo" },
-  { role: "Implementer · Bball Coach", name: "Coach Taylor Brooks", email: "taylor@groundedskillslab.demo" },
-  { role: "Caregiver", name: "Sam Rivera", email: "sam@groundedskillslab.demo" },
-  { role: "Caregiver / Family", name: "Alex Kim", email: "alexk@groundedskillslab.demo" },
-  { role: "Athlete / Learner", name: "Riley Chen", email: "riley@groundedskillslab.demo" },
-  { role: "Athlete / Learner", name: "Jamie Park", email: "jamie@groundedskillslab.demo" },
-  { role: "Self-Directed Athlete", name: "Devon Ortiz", email: "devon@groundedskillslab.demo" },
-];
 
 export default function LoginPage() {
   return (
@@ -128,28 +112,6 @@ function LoginForm() {
               Create your own account
             </Link>
           </p>
-
-          <div className="mt-10">
-            <div className="text-xs uppercase tracking-wide text-ink-muted mb-3">Demo accounts (password: {DEMO_PASSWORD})</div>
-            <div className="grid grid-cols-1 gap-1.5 max-h-80 overflow-y-auto pr-1">
-              {DEMO_USERS.map((u) => (
-                <button
-                  key={u.email}
-                  onClick={() => {
-                    setEmail(u.email);
-                    setPassword(DEMO_PASSWORD);
-                    doSignIn(u.email, DEMO_PASSWORD);
-                  }}
-                  className="text-left rounded-lg border border-gridline px-3 py-2 hover:bg-brand-soft hover:border-brand/30 transition text-sm flex items-center justify-between gap-2"
-                >
-                  <span>
-                    <span className="font-medium">{u.name}</span>
-                    <span className="text-ink-muted"> · {u.role}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
