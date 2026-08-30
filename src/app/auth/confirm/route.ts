@@ -16,12 +16,19 @@ import { createClient } from "@/lib/supabase/server";
 //
 // Public path — see middleware.ts. Must stay reachable with no
 // session, since establishing one is exactly what this route does.
+// Per-type fallback for when the email link doesn't carry an explicit
+// `next` (e.g. Supabase's default recovery template) — recovery links
+// should land on /reset-password, not the invite flow's default.
+const DEFAULT_NEXT_BY_TYPE: Partial<Record<EmailOtpType, string>> = {
+  recovery: "/reset-password",
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const rawNext = searchParams.get("next");
-  const next = rawNext && rawNext.startsWith("/") ? rawNext : "/accept-invite";
+  const next = rawNext && rawNext.startsWith("/") ? rawNext : (type && DEFAULT_NEXT_BY_TYPE[type]) || "/accept-invite";
 
   if (token_hash && type) {
     const supabase = await createClient();
