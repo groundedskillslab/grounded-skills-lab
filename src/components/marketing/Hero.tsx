@@ -9,7 +9,7 @@ export function Hero() {
           <div className="font-heading font-semibold text-[11px] md:text-xs tracking-[0.16em] uppercase text-brand-ink">
             Grounded Skills Lab
           </div>
-          <h1 className="font-heading font-extrabold text-[38px] md:text-[54px] leading-[1.05] md:leading-[1.04] tracking-[-0.02em] mt-3.5 md:mt-4.5">
+          <h1 className="font-heading font-semibold text-[38px] md:text-[54px] leading-[1.05] md:leading-[1.04] tracking-[-0.02em] mt-3.5 md:mt-4.5">
             Practice.
             <br />
             Measure.
