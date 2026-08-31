@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 // Landed on from the link in a password-recovery email (see
@@ -13,7 +12,11 @@ import { createClient } from "@/lib/supabase/client";
 // fragment (`#access_token=...&refresh_token=...&type=recovery`), which the
 // browser Supabase client does not reliably auto-consume here, so this page
 // parses it explicitly via setSession() rather than trusting
-// detectSessionInUrl. Public path — see middleware.ts.
+// detectSessionInUrl. On a successful password update this signs out of the
+// recovery session and hard-redirects to /login?passwordReset=1, rather than
+// continuing straight into the app — matches the "reset, then sign in with
+// the new password" expectation, unlike /accept-invite's first-time flow.
+// Public path — see middleware.ts.
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={null}>
@@ -23,14 +26,12 @@ export default function ResetPasswordPage() {
 }
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -79,13 +80,23 @@ function ResetPasswordForm() {
     setLoading(true);
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setLoading(false);
 
     if (updateError) {
+      setLoading(false);
       setError(updateError.message);
       return;
     }
-    setDone(true);
+
+    // Sign out of the session the recovery link established, then send them
+    // to a fresh sign-in — matches the expectation of "reset, then log in
+    // with the new password" rather than silently continuing in as still
+    // signed in. A hard navigation (not router.push) is deliberate here: it
+    // guarantees the redirect actually happens rather than depending on a
+    // second click after this async work completes, which is what a prior
+    // version of this page did and it didn't reliably fire.
+    await supabase.auth.signOut();
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate hard navigation, see comment above
+    window.location.href = "/login?passwordReset=1";
   }
 
   if (!ready) {
@@ -104,26 +115,6 @@ function ResetPasswordForm() {
             </a>{" "}
             page.
           </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (done) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="max-w-sm text-center space-y-4">
-          <h1 className="text-xl font-medium">Password updated</h1>
-          <p className="text-sm text-ink-secondary">You&apos;re all set — continue into your account.</p>
-          <button
-            onClick={() => {
-              router.push("/home");
-              router.refresh();
-            }}
-            className="w-full rounded-lg bg-ink text-white py-2 text-sm font-medium hover:opacity-90 transition"
-          >
-            Continue
-          </button>
         </div>
       </div>
     );
@@ -168,7 +159,7 @@ function ResetPasswordForm() {
             disabled={loading}
             className="w-full rounded-lg bg-ink text-white py-2 text-sm font-medium hover:opacity-90 transition disabled:opacity-50"
           >
-            {loading ? "Updating..." : "Update password"}
+            {loading ? "Updating..." : "Update password & sign in"}
           </button>
         </form>
       </div>

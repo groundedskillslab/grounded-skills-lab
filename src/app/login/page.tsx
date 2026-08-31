@@ -18,6 +18,7 @@ function LoginForm() {
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/home";
   const justSignedUp = params.get("justSignedUp") === "1";
+  const passwordReset = params.get("passwordReset") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +65,11 @@ function LoginForm() {
           {justSignedUp && (
             <p className="text-sm text-status-good mb-6">
               Account created — sign in with the password you just set.
+            </p>
+          )}
+          {passwordReset && (
+            <p className="text-sm text-status-good mb-6">
+              Password updated — sign in with your new password.
             </p>
           )}
 
