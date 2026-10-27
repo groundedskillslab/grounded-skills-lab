@@ -77,14 +77,34 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Next.js's own static assets (JS/CSS/font/image chunks under _next/static
+  // — including the self-hosted Sofia Pro/Bookmania font files, see
+  // fonts.ts — plus the image-optimization endpoint and bare image/font
+  // files) never carry session-relevant routing of their own. They used to
+  // be excluded entirely via `matcher` below, which was faster but had a
+  // real security gap: a matcher exclusion skips this whole function,
+  // siteAccessOk() included, so while SITE_ACCESS_PASSWORD is set these
+  // paths were reachable with NO password at all — found 2026-10-27 when a
+  // font-licensing concern made that a real problem, not just a theoretical
+  // one. `matcher` now covers everything (see below) so siteAccessOk() above
+  // always runs first; this early return just skips the (unrelated)
+  // Supabase session lookup for pure asset requests once that gate is
+  // cleared, so this fix doesn't add a Supabase call to every JS/CSS/font
+  // request during normal (gate-disabled) operation.
+  const isNextInternalAsset =
+    pathname.startsWith("/_next/static") ||
+    pathname.startsWith("/_next/image") ||
+    pathname === "/favicon.ico" ||
+    /\.(png|svg|jpe?g|gif|webp|ico|ttf|otf|woff2?)$/.test(pathname);
+  if (isNextInternalAsset) return NextResponse.next();
+
   const isPublic =
     pathname === "/" || // marketing homepage — exact match only, NOT startsWith("/")
     pathname.startsWith("/beta") || // public beta-interest form
     pathname.startsWith("/privacy") || // public privacy policy
     pathname.startsWith("/terms") || // public terms of service
     PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico";
+    pathname.startsWith("/_next"); // non-static _next paths (e.g. /_next/data) — deliberately NOT bypassed above; see Next's own proxy docs on why /_next/data should still pass through auth logic
 
   // Supabase Auth (2026-08-18, replaced NextAuth) — this call both refreshes
   // the session cookies (required so server components see a valid session
@@ -106,5 +126,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|.*\\.png$|.*\\.svg$).*)"],
+  // No exclusions. Per Next's own proxy/middleware docs, a matcher
+  // exclusion skips this entire function for matching paths — that's what
+  // let static assets (including the licensed font files) bypass
+  // siteAccessOk() entirely. Every request must clear that gate now; the
+  // isNextInternalAsset check above keeps the Supabase session lookup from
+  // running on every asset request once it does.
+  matcher: ["/(.*)"],
 };
